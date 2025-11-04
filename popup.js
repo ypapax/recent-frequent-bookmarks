@@ -3,6 +3,7 @@
 let allItems = [];
 let bookmarkUsage = {};
 let bookmarkUrlMap = new Map(); // Map URLs to bookmark IDs
+let hiddenItems = new Set(); // Set of hidden URLs
 
 // Initialize popup
 document.addEventListener('DOMContentLoaded', async () => {
@@ -34,10 +35,20 @@ function setupEventListeners() {
     }
   });
 
-  // Clear history button
+  // Reset hidden button
+  const resetHiddenButton = document.getElementById('resetHidden');
+  resetHiddenButton.addEventListener('click', async () => {
+    if (confirm('Are you sure you want to show all hidden items?')) {
+      await chrome.storage.local.remove('hiddenItems');
+      hiddenItems.clear();
+      applyFilters();
+    }
+  });
+
+  // Clear tracking button
   const clearButton = document.getElementById('clearHistory');
   clearButton.addEventListener('click', async () => {
-    if (confirm('Are you sure you want to clear the usage tracking data?')) {
+    if (confirm('Are you sure you want to clear the extension tracking data?\n\nThis will reset click counts tracked by this extension.\nYour browser history will NOT be affected.')) {
       await chrome.runtime.sendMessage({ action: 'clearHistory' });
       await loadData();
     }
@@ -46,9 +57,10 @@ function setupEventListeners() {
 
 async function loadData() {
   try {
-    // Load usage data
-    const result = await chrome.storage.local.get('bookmarkUsage');
+    // Load usage data and hidden items
+    const result = await chrome.storage.local.get(['bookmarkUsage', 'hiddenItems']);
     bookmarkUsage = result.bookmarkUsage || {};
+    hiddenItems = new Set(result.hiddenItems || []);
 
     // Get all bookmarks
     const bookmarkTree = await chrome.bookmarks.getTree();
@@ -70,8 +82,8 @@ async function loadData() {
     // Merge bookmarks and history
     allItems = mergeBookmarksAndHistory(bookmarks, historyItems);
 
-    // Sort by score
-    sortAndDisplayItems(allItems);
+    // Apply filters (which will also filter out hidden items)
+    applyFilters();
   } catch (error) {
     console.error('Error loading data:', error);
     displayError('Failed to load data: ' + error.message);
@@ -317,7 +329,14 @@ function createItemElement(item) {
         <div class="bookmark-url">${item.path ? escapeHtml(item.path) : 'Folder'}</div>
       </div>
       <div class="bookmark-meta">${metaText}</div>
+      <button class="hide-button" title="Hide this folder">✕</button>
     `;
+
+    const hideButton = div.querySelector('.hide-button');
+    hideButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      hideItem(item.id);
+    });
 
     div.addEventListener('click', () => {
       openFolder(item.id);
@@ -332,7 +351,14 @@ function createItemElement(item) {
         <div class="bookmark-url">${escapeHtml(item.url)}</div>
       </div>
       <div class="bookmark-meta">${metaText}</div>
+      <button class="hide-button" title="Hide this item">✕</button>
     `;
+
+    const hideButton = div.querySelector('.hide-button');
+    hideButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      hideItem(item.url);
+    });
 
     div.addEventListener('click', () => {
       chrome.tabs.create({ url: item.url });
@@ -341,6 +367,24 @@ function createItemElement(item) {
   }
 
   return div;
+}
+
+async function hideItem(itemId) {
+  // Ask for confirmation
+  if (!confirm('Are you sure you want to hide this item?\n\nYou can restore it later by clicking "Reset Hidden".')) {
+    return;
+  }
+
+  // Add to hidden items set
+  hiddenItems.add(itemId);
+
+  // Save to storage
+  await chrome.storage.local.set({
+    hiddenItems: Array.from(hiddenItems)
+  });
+
+  // Re-apply filters to remove the item from view
+  applyFilters();
 }
 
 function openFolder(folderId) {
@@ -368,6 +412,10 @@ function applyFilters() {
   const FREQUENT_THRESHOLD = 10; // 10+ visits = frequent
 
   let filtered = allItems.filter(item => {
+    // Filter out hidden items
+    if (item.url && hiddenItems.has(item.url)) return false;
+    if (item.id && hiddenItems.has(item.id)) return false; // For folders
+
     // Apply type filters
     if (item.isBookmark && !item.isFolder && !showBookmarks) return false;
     if (item.type === 'history' && !showHistory) return false;

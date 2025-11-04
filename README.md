@@ -25,7 +25,14 @@ A Chrome extension that shows your **bookmarks AND browsing history** combined a
   - Folders have a 📁 icon
   - Visit counts and time ago are displayed
 
-- **Clear History**: Option to clear usage tracking data
+- **Hide Items**:
+  - Hover over any item to reveal a hide button (✕)
+  - Click to hide unwanted items from the list
+  - Hidden items won't appear until you click "Reset Hidden"
+
+- **Management Options**:
+  - **Reset Hidden**: Restore all hidden items back to the list
+  - **Clear History**: Clear usage tracking data
 
 ## Installation
 
