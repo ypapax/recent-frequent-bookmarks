@@ -1,11 +1,12 @@
-// Popup script to display sorted bookmarks
+// Popup script to display sorted bookmarks and history
 
-let allBookmarks = [];
+let allItems = [];
 let bookmarkUsage = {};
+let bookmarkUrlMap = new Map(); // Map URLs to bookmark IDs
 
 // Initialize popup
 document.addEventListener('DOMContentLoaded', async () => {
-  await loadBookmarks();
+  await loadData();
   setupEventListeners();
 });
 
@@ -13,78 +14,151 @@ function setupEventListeners() {
   // Search functionality
   const searchInput = document.getElementById('search');
   searchInput.addEventListener('input', (e) => {
-    filterBookmarks(e.target.value);
+    applyFilters();
+  });
+
+  // Filter checkboxes
+  const filterCheckboxes = [
+    'filterBookmarks',
+    'filterHistory',
+    'filterFrequent',
+    'filterRecent'
+  ];
+
+  filterCheckboxes.forEach(id => {
+    const checkbox = document.getElementById(id);
+    if (checkbox) {
+      checkbox.addEventListener('change', () => {
+        applyFilters();
+      });
+    }
   });
 
   // Clear history button
   const clearButton = document.getElementById('clearHistory');
   clearButton.addEventListener('click', async () => {
-    if (confirm('Are you sure you want to clear the usage history?')) {
+    if (confirm('Are you sure you want to clear the usage tracking data?')) {
       await chrome.runtime.sendMessage({ action: 'clearHistory' });
-      await loadBookmarks();
+      await loadData();
     }
   });
 }
 
-async function loadBookmarks() {
+async function loadData() {
   try {
-    console.log('Loading bookmarks...');
-
     // Load usage data
     const result = await chrome.storage.local.get('bookmarkUsage');
     bookmarkUsage = result.bookmarkUsage || {};
-    console.log('Usage data loaded:', bookmarkUsage);
 
     // Get all bookmarks
     const bookmarkTree = await chrome.bookmarks.getTree();
-    console.log('Bookmark tree loaded:', bookmarkTree);
 
-    allBookmarks = [];
-    flattenBookmarks(bookmarkTree[0], allBookmarks);
-    console.log('Flattened bookmarks count:', allBookmarks.length);
+    const bookmarks = [];
+    flattenBookmarks(bookmarkTree[0], bookmarks);
 
-    // Enrich bookmarks with history data
-    await enrichBookmarksWithHistory(allBookmarks);
-    console.log('Bookmarks enriched with history');
+    // Create URL map for quick lookup
+    bookmarkUrlMap.clear();
+    bookmarks.forEach(bookmark => {
+      if (bookmark.url) {
+        bookmarkUrlMap.set(bookmark.url, bookmark.id);
+      }
+    });
 
-    // Sort by usage
-    sortAndDisplayBookmarks(allBookmarks);
+    // Get top history items
+    const historyItems = await getTopHistoryItems(500); // Get top 500 most visited
+
+    // Merge bookmarks and history
+    allItems = mergeBookmarksAndHistory(bookmarks, historyItems);
+
+    // Sort by score
+    sortAndDisplayItems(allItems);
   } catch (error) {
-    console.error('Error loading bookmarks:', error);
-    displayError('Failed to load bookmarks: ' + error.message);
+    console.error('Error loading data:', error);
+    displayError('Failed to load data: ' + error.message);
   }
 }
 
-async function enrichBookmarksWithHistory(bookmarks) {
-  // Check browser history for bookmarks that don't have usage data
-  const promises = bookmarks.map(async (bookmark) => {
-    if (bookmark.type === 'bookmark' && bookmark.url) {
-      // If no usage data exists, check browser history
-      if (!bookmarkUsage[bookmark.id]) {
-        try {
-          const visits = await chrome.history.getVisits({ url: bookmark.url });
-          if (visits && visits.length > 0) {
-            // Sort visits by time and get the most recent
-            visits.sort((a, b) => b.visitTime - a.visitTime);
-            const lastVisit = visits[0].visitTime;
+async function getTopHistoryItems(maxResults = 500) {
+  try {
+    // Get recent history items
+    const historyItems = await chrome.history.search({
+      text: '',
+      maxResults: maxResults,
+      startTime: 0
+    });
 
-            // Store this data (but don't persist it, just use for sorting)
-            bookmark.historyLastVisit = lastVisit;
-            bookmark.historyVisitCount = visits.length;
-          }
-        } catch (error) {
-          console.error('Error getting history for bookmark:', bookmark.url, error);
-        }
-      }
+    // Get visit counts for each URL
+    const enrichedItems = await Promise.all(
+      historyItems.map(async (item) => {
+        const visits = await chrome.history.getVisits({ url: item.url });
+        return {
+          url: item.url,
+          title: item.title || item.url,
+          visitCount: item.visitCount || visits.length,
+          lastVisitTime: item.lastVisitTime,
+          visits: visits
+        };
+      })
+    );
+
+    // Filter out items with no visits
+    return enrichedItems.filter(item => item.visitCount > 0);
+  } catch (error) {
+    console.error('Error getting history items:', error);
+    return [];
+  }
+}
+
+function mergeBookmarksAndHistory(bookmarks, historyItems) {
+  const merged = [];
+  const processedUrls = new Set();
+
+  // Process bookmarks first
+  bookmarks.forEach(bookmark => {
+    if (bookmark.type === 'folder') {
+      // Add folders as-is
+      merged.push({
+        ...bookmark,
+        isBookmark: true,
+        isFolder: true
+      });
+    } else if (bookmark.url) {
+      // Mark bookmark URLs as processed
+      processedUrls.add(bookmark.url);
+
+      // Find matching history item for this bookmark
+      const historyItem = historyItems.find(h => h.url === bookmark.url);
+
+      merged.push({
+        ...bookmark,
+        isBookmark: true,
+        isFolder: false,
+        visitCount: historyItem?.visitCount || 0,
+        lastVisitTime: historyItem?.lastVisitTime || bookmark.dateAdded
+      });
     }
   });
 
-  await Promise.all(promises);
+  // Add history items that are NOT bookmarks
+  historyItems.forEach(historyItem => {
+    if (!processedUrls.has(historyItem.url)) {
+      merged.push({
+        id: 'history-' + historyItem.url,
+        url: historyItem.url,
+        title: historyItem.title,
+        type: 'history',
+        isBookmark: false,
+        isFolder: false,
+        visitCount: historyItem.visitCount,
+        lastVisitTime: historyItem.lastVisitTime
+      });
+    }
+  });
+
+  return merged;
 }
 
 function flattenBookmarks(node, result, path = []) {
-  console.log('Processing node:', node.id, node.title, 'has URL:', !!node.url, 'has children:', !!node.children);
-
   if (node.url) {
     // It's a bookmark
     result.push({
@@ -92,7 +166,6 @@ function flattenBookmarks(node, result, path = []) {
       type: 'bookmark',
       path: path.join(' > ')
     });
-    console.log('Added bookmark:', node.title);
   } else if (node.children || node.id === '0') {
     // It's a folder
     // Add folder to results (except root with id '0')
@@ -102,7 +175,6 @@ function flattenBookmarks(node, result, path = []) {
         type: 'folder',
         path: path.join(' > ')
       });
-      console.log('Added folder:', node.title);
     }
 
     // Process children
@@ -115,66 +187,80 @@ function flattenBookmarks(node, result, path = []) {
   }
 }
 
-function sortAndDisplayBookmarks(bookmarks) {
-  // Sort bookmarks by multiple criteria:
-  // 1. Extension-tracked usage (clicks)
-  // 2. Browser history visits
-  // 3. Creation date (dateAdded)
-  const sorted = bookmarks.sort((a, b) => {
-    const aUsage = bookmarkUsage[a.id];
-    const bUsage = bookmarkUsage[b.id];
+function calculateScore(item) {
+  let score = 0;
+  const now = Date.now();
+  const ONE_DAY = 24 * 60 * 60 * 1000;
 
-    // Priority 1: Extension-tracked usage data
-    if (aUsage && bUsage) {
-      // First compare by last used time
-      if (aUsage.lastUsed !== bUsage.lastUsed) {
-        return bUsage.lastUsed - aUsage.lastUsed;
-      }
-      // Then by use count
-      return bUsage.useCount - aUsage.useCount;
+  // Component 1: Visit frequency (0-100 points)
+  const visitCount = item.visitCount || 0;
+  const frequencyScore = Math.min(100, visitCount * 2); // 2 points per visit, max 100
+
+  // Component 2: Recency score (0-100 points)
+  const lastVisit = item.lastVisitTime || item.dateAdded || 0;
+  const daysSinceVisit = (now - lastVisit) / ONE_DAY;
+  let recencyScore = 0;
+  if (daysSinceVisit < 1) recencyScore = 100;
+  else if (daysSinceVisit < 7) recencyScore = 80;
+  else if (daysSinceVisit < 30) recencyScore = 60;
+  else if (daysSinceVisit < 90) recencyScore = 40;
+  else if (daysSinceVisit < 180) recencyScore = 20;
+  else recencyScore = 10;
+
+  // Component 3: Extension usage bonus (0-50 points)
+  const usage = bookmarkUsage[item.id];
+  let extensionScore = 0;
+  if (usage) {
+    const extensionDaysSince = (now - usage.lastUsed) / ONE_DAY;
+    extensionScore = 30 + Math.min(20, usage.useCount * 5); // Base 30 + up to 20 for count
+    if (extensionDaysSince < 1) extensionScore += 20; // Recent bonus
+  }
+
+  // Component 4: Bookmark bonus (50 points)
+  const bookmarkBonus = item.isBookmark && !item.isFolder ? 50 : 0;
+
+  // Folders get special handling (always sort to bottom unless actively used)
+  if (item.isFolder) {
+    return extensionScore; // Only extension score matters for folders
+  }
+
+  score = frequencyScore + recencyScore + extensionScore + bookmarkBonus;
+
+  return score;
+}
+
+function sortAndDisplayItems(items) {
+  // Calculate scores for all items
+  items.forEach(item => {
+    item.score = calculateScore(item);
+  });
+
+  // Sort by score (highest first)
+  const sorted = items.sort((a, b) => {
+    // Folders go to bottom unless they have high extension usage
+    if (a.isFolder && !b.isFolder && a.score < 50) return 1;
+    if (b.isFolder && !a.isFolder && b.score < 50) return -1;
+
+    // Otherwise sort by score
+    if (b.score !== a.score) {
+      return b.score - a.score;
     }
 
-    // If only one has extension usage data, prioritize it
-    if (aUsage) return -1;
-    if (bUsage) return 1;
-
-    // Priority 2: Browser history data (for bookmarks only)
-    if (a.type === 'bookmark' && b.type === 'bookmark') {
-      const aHistoryTime = a.historyLastVisit || 0;
-      const bHistoryTime = b.historyLastVisit || 0;
-
-      if (aHistoryTime && bHistoryTime) {
-        if (aHistoryTime !== bHistoryTime) {
-          return bHistoryTime - aHistoryTime;
-        }
-        // Compare by visit count if times are equal
-        return (b.historyVisitCount || 0) - (a.historyVisitCount || 0);
-      }
-
-      if (aHistoryTime) return -1;
-      if (bHistoryTime) return 1;
-    }
-
-    // Priority 3: Creation date (dateAdded)
-    if (a.dateAdded && b.dateAdded) {
-      return b.dateAdded - a.dateAdded;
-    }
-
-    // Fallback: alphabetically
+    // Tie breaker: alphabetically
     return a.title.localeCompare(b.title);
   });
 
-  displayBookmarks(sorted);
+  displayItems(sorted);
 }
 
-function displayBookmarks(bookmarks) {
+function displayItems(items) {
   const container = document.getElementById('bookmarksList');
 
-  if (bookmarks.length === 0) {
+  if (items.length === 0) {
     container.innerHTML = `
       <div class="empty-state">
-        <h3>No bookmarks found</h3>
-        <p>Start using your bookmarks to see them here</p>
+        <h3>No items found</h3>
+        <p>Start browsing to see your history here</p>
       </div>
     `;
     return;
@@ -182,62 +268,74 @@ function displayBookmarks(bookmarks) {
 
   container.innerHTML = '';
 
-  bookmarks.forEach(bookmark => {
-    const item = createBookmarkElement(bookmark);
-    container.appendChild(item);
+  items.forEach(item => {
+    const element = createItemElement(item);
+    container.appendChild(element);
   });
 }
 
-function createBookmarkElement(bookmark) {
+function createItemElement(item) {
   const div = document.createElement('div');
-  div.className = `bookmark-item ${bookmark.type}`;
 
-  const usage = bookmarkUsage[bookmark.id];
-  let metaText = '';
-
-  if (usage) {
-    // Extension tracked usage
-    const timeAgo = getTimeAgo(usage.lastUsed);
-    metaText = `Used ${usage.useCount} time${usage.useCount > 1 ? 's' : ''} • ${timeAgo}`;
-  } else if (bookmark.historyLastVisit) {
-    // Browser history data
-    const timeAgo = getTimeAgo(bookmark.historyLastVisit);
-    metaText = `Visited ${bookmark.historyVisitCount} time${bookmark.historyVisitCount > 1 ? 's' : ''} • ${timeAgo}`;
-  } else if (bookmark.dateAdded) {
-    // Creation date fallback
-    const timeAgo = getTimeAgo(bookmark.dateAdded);
-    metaText = `Created ${timeAgo}`;
+  // Determine item class
+  let itemClass = 'bookmark-item';
+  if (item.isFolder) {
+    itemClass += ' folder';
+  } else if (item.isBookmark) {
+    itemClass += ' bookmark';
   } else {
-    metaText = 'No usage data';
+    itemClass += ' history';
+  }
+  div.className = itemClass;
+
+  // Build metadata text
+  let metaText = '';
+  const visitCount = item.visitCount || 0;
+  const lastVisit = item.lastVisitTime || item.dateAdded || 0;
+
+  if (visitCount > 0 && lastVisit) {
+    const timeAgo = getTimeAgo(lastVisit);
+    metaText = `${visitCount} visit${visitCount > 1 ? 's' : ''} • ${timeAgo}`;
+  } else if (item.dateAdded) {
+    const timeAgo = getTimeAgo(item.dateAdded);
+    metaText = `Created ${timeAgo}`;
   }
 
-  if (bookmark.type === 'folder') {
+  // Add badge for item type
+  let badge = '';
+  if (item.isBookmark && !item.isFolder) {
+    badge = '<span class="badge bookmark-badge">⭐</span>';
+  } else if (item.type === 'history') {
+    badge = '<span class="badge history-badge">🕐</span>';
+  }
+
+  if (item.isFolder) {
     div.innerHTML = `
       <span class="folder-icon">📁</span>
       <div class="bookmark-content">
-        <div class="bookmark-title">${escapeHtml(bookmark.title)}</div>
-        <div class="bookmark-url">${bookmark.path ? escapeHtml(bookmark.path) : 'Folder'}</div>
+        <div class="bookmark-title">${escapeHtml(item.title)}</div>
+        <div class="bookmark-url">${item.path ? escapeHtml(item.path) : 'Folder'}</div>
       </div>
       <div class="bookmark-meta">${metaText}</div>
     `;
 
     div.addEventListener('click', () => {
-      openFolder(bookmark.id);
+      openFolder(item.id);
     });
   } else {
-    const favicon = getFaviconUrl(bookmark.url);
+    const favicon = getFaviconUrl(item.url);
 
     div.innerHTML = `
       <img class="bookmark-favicon" src="${favicon}" alt="" onerror="this.style.display='none'">
       <div class="bookmark-content">
-        <div class="bookmark-title">${escapeHtml(bookmark.title)}</div>
-        <div class="bookmark-url">${escapeHtml(bookmark.url)}</div>
+        <div class="bookmark-title">${badge}${escapeHtml(item.title)}</div>
+        <div class="bookmark-url">${escapeHtml(item.url)}</div>
       </div>
       <div class="bookmark-meta">${metaText}</div>
     `;
 
     div.addEventListener('click', () => {
-      chrome.tabs.create({ url: bookmark.url });
+      chrome.tabs.create({ url: item.url });
       window.close();
     });
   }
@@ -259,22 +357,55 @@ function getFaviconUrl(url) {
   }
 }
 
-function filterBookmarks(query) {
-  if (!query.trim()) {
-    sortAndDisplayBookmarks(allBookmarks);
-    return;
-  }
+function applyFilters() {
+  const searchQuery = document.getElementById('search').value.trim().toLowerCase();
+  const showBookmarks = document.getElementById('filterBookmarks').checked;
+  const showHistory = document.getElementById('filterHistory').checked;
+  const showFrequent = document.getElementById('filterFrequent').checked;
+  const showRecent = document.getElementById('filterRecent').checked;
 
-  const lowerQuery = query.toLowerCase();
-  const filtered = allBookmarks.filter(bookmark => {
-    return (
-      bookmark.title.toLowerCase().includes(lowerQuery) ||
-      (bookmark.url && bookmark.url.toLowerCase().includes(lowerQuery)) ||
-      bookmark.path.toLowerCase().includes(lowerQuery)
-    );
+  const ONE_DAY = 24 * 60 * 60 * 1000;
+  const FREQUENT_THRESHOLD = 10; // 10+ visits = frequent
+
+  let filtered = allItems.filter(item => {
+    // Apply type filters
+    if (item.isBookmark && !item.isFolder && !showBookmarks) return false;
+    if (item.type === 'history' && !showHistory) return false;
+
+    // Apply frequency/recency filters
+    const visitCount = item.visitCount || 0;
+    const lastVisit = item.lastVisitTime || item.dateAdded || 0;
+    const daysSinceVisit = (Date.now() - lastVisit) / ONE_DAY;
+
+    const isFrequent = visitCount >= FREQUENT_THRESHOLD;
+    const isRecent = daysSinceVisit < 7; // Last 7 days
+
+    // If filtering by frequent or recent
+    if (!showFrequent && !showRecent) {
+      // Both unchecked - show nothing that would need these filters
+      if (!item.isFolder && visitCount === 0) return false;
+    } else if (!showFrequent && showRecent) {
+      // Only recent
+      if (!item.isFolder && !isRecent) return false;
+    } else if (showFrequent && !showRecent) {
+      // Only frequent
+      if (!item.isFolder && !isFrequent) return false;
+    }
+    // If both checked, show all (no additional filtering)
+
+    // Apply search query
+    if (searchQuery) {
+      return (
+        item.title.toLowerCase().includes(searchQuery) ||
+        (item.url && item.url.toLowerCase().includes(searchQuery)) ||
+        (item.path && item.path.toLowerCase().includes(searchQuery))
+      );
+    }
+
+    return true;
   });
 
-  sortAndDisplayBookmarks(filtered);
+  sortAndDisplayItems(filtered);
 }
 
 function getTimeAgo(timestamp) {

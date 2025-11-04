@@ -35,6 +35,7 @@ h1 {
 .controls {
   display: flex;
   gap: 8px;
+  margin-bottom: 12px;
 }
 
 #search {
@@ -49,6 +50,39 @@ h1 {
 
 #search:focus {
   border-color: #4285f4;
+}
+
+.filters {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 0;
+  border-top: 1px solid #e0e0e0;
+  margin-top: 8px;
+}
+
+.filter-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #5f6368;
+  user-select: none;
+}
+
+.filter-checkbox input[type="checkbox"] {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+}
+
+.filter-checkbox:hover {
+  color: #202124;
+}
+
+.filter-checkbox span {
+  white-space: nowrap;
 }
 
 #clearHistory {
@@ -107,6 +141,19 @@ h1 {
   background-color: #fff5cc;
 }
 
+.bookmark-item.bookmark {
+  border-left: 3px solid #fbbc04;
+}
+
+.bookmark-item.history {
+  background-color: #f8f9fa;
+  border-left: 3px solid #9aa0a6;
+}
+
+.bookmark-item.history:hover {
+  background-color: #e8eaed;
+}
+
 .bookmark-icon {
   width: 16px;
   height: 16px;
@@ -151,6 +198,20 @@ h1 {
   width: 16px;
   height: 16px;
   border-radius: 2px;
+}
+
+.badge {
+  font-size: 12px;
+  margin-right: 4px;
+  display: inline-block;
+}
+
+.bookmark-badge {
+  color: #fbbc04;
+}
+
+.history-badge {
+  color: #9aa0a6;
 }
 
 .no-results {

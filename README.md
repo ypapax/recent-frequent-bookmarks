@@ -1,21 +1,30 @@
-# Recently Used Bookmarks - Chrome Extension
+# Recently Used Bookmarks & History - Chrome Extension
 
-A Chrome extension that displays your bookmarks and bookmark folders sorted by recently used, making it easy to quickly access your most frequently visited bookmarks.
+A Chrome extension that shows your **bookmarks AND browsing history** combined and sorted by a smart scoring algorithm, making it easy to quickly access your most frequently and recently visited pages.
 
 ## Features
 
-- **Smart Sorting**: Bookmarks are sorted by multiple criteria in priority order:
-  1. Extension-tracked clicks (when you click bookmarks through the extension)
-  2. Browser history visits (checks your actual browsing history)
-  3. Creation date (newest first)
-  4. Alphabetical (fallback)
+- **Unified View**: Displays both bookmarks and browsing history in one place
+- **Smart Scoring Algorithm**: Items are ranked by:
+  - **Visit Frequency** (0-100 points): More visits = higher score
+  - **Recency** (0-100 points): Recently visited items score higher
+  - **Extension Usage** (0-50 points): Bonus for items clicked through the extension
+  - **Bookmark Bonus** (+50 points): Bookmarked items get a scoring boost
 
-- **Shows Both Bookmarks and Folders**: View both individual bookmarks and bookmark folders
-- **Search Functionality**: Quickly find bookmarks by title, URL, or folder path
+- **Advanced Filtering**: Filter items by:
+  - ⭐ **Bookmarks**: Show only bookmarked items
+  - 🕐 **History**: Show only browsing history items
+  - 🔥 **Frequent**: Show items with 10+ visits
+  - ⏱️ **Recent**: Show items visited in the last 7 days
+
+- **Search Functionality**: Quickly find items by title, URL, or folder path
+
 - **Visual Indicators**:
-  - Displays usage count and last used time
-  - Shows whether data comes from extension tracking, browser history, or creation date
-  - Different styling for folders vs bookmarks
+  - Bookmarks have a ⭐ badge and yellow left border
+  - History items have a 🕐 badge and gray background
+  - Folders have a 📁 icon
+  - Visit counts and time ago are displayed
+
 - **Clear History**: Option to clear usage tracking data
 
 ## Installation

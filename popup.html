@@ -9,14 +9,32 @@
 <body>
   <div class="container">
     <div class="header">
-      <h1>Recently Used Bookmarks</h1>
+      <h1>Recently Used</h1>
       <div class="controls">
-        <input type="text" id="search" placeholder="Search bookmarks...">
+        <input type="text" id="search" placeholder="Search...">
         <button id="clearHistory" title="Clear usage history">Clear History</button>
+      </div>
+      <div class="filters">
+        <label class="filter-checkbox">
+          <input type="checkbox" id="filterBookmarks" checked>
+          <span>⭐ Bookmarks</span>
+        </label>
+        <label class="filter-checkbox">
+          <input type="checkbox" id="filterHistory" checked>
+          <span>🕐 History</span>
+        </label>
+        <label class="filter-checkbox">
+          <input type="checkbox" id="filterFrequent" checked>
+          <span>🔥 Frequent</span>
+        </label>
+        <label class="filter-checkbox">
+          <input type="checkbox" id="filterRecent" checked>
+          <span>⏱️ Recent</span>
+        </label>
       </div>
     </div>
     <div id="bookmarksList" class="bookmarks-list">
-      <div class="loading">Loading bookmarks...</div>
+      <div class="loading">Loading...</div>
     </div>
   </div>
   <script src="popup.js"></script>
