@@ -1,0 +1,13 @@
+<svg width="128" height="128" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="128" height="128" rx="24" fill="#4285f4"/>
+
+  <!-- Bookmark icon -->
+  <path d="M40 30 L88 30 L88 100 L64 85 L40 100 Z" fill="#ffffff" stroke="#ffffff" stroke-width="2"/>
+
+  <!-- Clock/recent indicator -->
+  <circle cx="85" cy="45" r="18" fill="#34a853"/>
+  <circle cx="85" cy="45" r="15" fill="#ffffff"/>
+  <line x1="85" y1="45" x2="85" y2="35" stroke="#34a853" stroke-width="2" stroke-linecap="round"/>
+  <line x1="85" y1="45" x2="92" y2="45" stroke="#34a853" stroke-width="2" stroke-linecap="round"/>
+</svg>
