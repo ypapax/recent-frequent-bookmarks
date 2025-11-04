@@ -29,6 +29,7 @@ function setupEventListeners() {
     const checkbox = document.getElementById(id);
     if (checkbox) {
       checkbox.addEventListener('change', () => {
+        saveFilterStates();
         applyFilters();
       });
     }
@@ -37,19 +38,45 @@ function setupEventListeners() {
   // Reset settings button
   const resetHiddenButton = document.getElementById('resetHidden');
   resetHiddenButton.addEventListener('click', async () => {
-    if (confirm('Are you sure you want to reset all settings?\n\nThis will show all hidden items.')) {
-      await chrome.storage.local.remove('hiddenItems');
+    if (confirm('Are you sure you want to reset all settings?\n\nThis will show all hidden items and reset filters to default.')) {
+      await chrome.storage.local.remove(['hiddenItems', 'filterStates']);
       hiddenItems.clear();
+
+      // Reset checkboxes to default (all checked)
+      document.getElementById('filterBookmarks').checked = true;
+      document.getElementById('filterHistory').checked = true;
+      document.getElementById('filterFrequent').checked = true;
+      document.getElementById('filterRecent').checked = true;
+
       applyFilters();
     }
   });
 }
 
+async function saveFilterStates() {
+  const filterStates = {
+    bookmarks: document.getElementById('filterBookmarks').checked,
+    history: document.getElementById('filterHistory').checked,
+    frequent: document.getElementById('filterFrequent').checked,
+    recent: document.getElementById('filterRecent').checked
+  };
+
+  await chrome.storage.local.set({ filterStates });
+}
+
 async function loadData() {
   try {
-    // Load hidden items
-    const result = await chrome.storage.local.get('hiddenItems');
+    // Load hidden items and filter states
+    const result = await chrome.storage.local.get(['hiddenItems', 'filterStates']);
     hiddenItems = new Set(result.hiddenItems || []);
+
+    // Restore filter checkbox states
+    if (result.filterStates) {
+      document.getElementById('filterBookmarks').checked = result.filterStates.bookmarks ?? true;
+      document.getElementById('filterHistory').checked = result.filterStates.history ?? true;
+      document.getElementById('filterFrequent').checked = result.filterStates.frequent ?? true;
+      document.getElementById('filterRecent').checked = result.filterStates.recent ?? true;
+    }
 
     // Get all bookmarks
     const bookmarkTree = await chrome.bookmarks.getTree();
@@ -188,7 +215,7 @@ function flattenBookmarks(node, result, path = []) {
   }
 }
 
-function calculateScore(item) {
+function calculateScore(item, useFrequency = true, useRecency = true) {
   let score = 0;
   const now = Date.now();
   const ONE_DAY = 24 * 60 * 60 * 1000;
@@ -198,20 +225,25 @@ function calculateScore(item) {
     return 0;
   }
 
-  // Component 1: Visit frequency (0-100 points)
-  const visitCount = item.visitCount || 0;
-  const frequencyScore = Math.min(100, visitCount * 2); // 2 points per visit, max 100
+  // Component 1: Visit frequency (0-100 points) - only if enabled
+  let frequencyScore = 0;
+  if (useFrequency) {
+    const visitCount = item.visitCount || 0;
+    frequencyScore = Math.min(100, visitCount * 2); // 2 points per visit, max 100
+  }
 
-  // Component 2: Recency score (0-100 points)
-  const lastVisit = item.lastVisitTime || item.dateAdded || 0;
-  const daysSinceVisit = (now - lastVisit) / ONE_DAY;
+  // Component 2: Recency score (0-100 points) - only if enabled
   let recencyScore = 0;
-  if (daysSinceVisit < 1) recencyScore = 100;
-  else if (daysSinceVisit < 7) recencyScore = 80;
-  else if (daysSinceVisit < 30) recencyScore = 60;
-  else if (daysSinceVisit < 90) recencyScore = 40;
-  else if (daysSinceVisit < 180) recencyScore = 20;
-  else recencyScore = 10;
+  if (useRecency) {
+    const lastVisit = item.lastVisitTime || item.dateAdded || 0;
+    const daysSinceVisit = (now - lastVisit) / ONE_DAY;
+    if (daysSinceVisit < 1) recencyScore = 100;
+    else if (daysSinceVisit < 7) recencyScore = 80;
+    else if (daysSinceVisit < 30) recencyScore = 60;
+    else if (daysSinceVisit < 90) recencyScore = 40;
+    else if (daysSinceVisit < 180) recencyScore = 20;
+    else recencyScore = 10;
+  }
 
   // Component 3: Bookmark bonus (50 points)
   const bookmarkBonus = item.isBookmark && !item.isFolder ? 50 : 0;
@@ -221,17 +253,17 @@ function calculateScore(item) {
   return score;
 }
 
-function sortAndDisplayItems(items) {
-  // Calculate scores for all items
+function sortAndDisplayItems(items, useFrequency = true, useRecency = true) {
+  // Calculate scores for all items based on active filters
   items.forEach(item => {
-    item.score = calculateScore(item);
+    item.score = calculateScore(item, useFrequency, useRecency);
   });
 
   // Sort by score (highest first)
   const sorted = items.sort((a, b) => {
-    // Folders go to bottom unless they have high extension usage
-    if (a.isFolder && !b.isFolder && a.score < 50) return 1;
-    if (b.isFolder && !a.isFolder && b.score < 50) return -1;
+    // Folders go to bottom
+    if (a.isFolder && !b.isFolder) return 1;
+    if (b.isFolder && !a.isFolder) return -1;
 
     // Otherwise sort by score
     if (b.score !== a.score) {
@@ -433,7 +465,8 @@ function applyFilters() {
     return true;
   });
 
-  sortAndDisplayItems(filtered);
+  // Pass the filter states to sorting so it knows which scoring components to use
+  sortAndDisplayItems(filtered, showFrequent, showRecent);
 }
 
 function getTimeAgo(timestamp) {
