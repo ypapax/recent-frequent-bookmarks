@@ -5,10 +5,9 @@ A Chrome extension that shows your **bookmarks AND browsing history** combined a
 ## Features
 
 - **Unified View**: Displays both bookmarks and browsing history in one place
-- **Smart Scoring Algorithm**: Items are ranked by:
+- **Smart Scoring Algorithm**: Items are ranked by browser history data:
   - **Visit Frequency** (0-100 points): More visits = higher score
   - **Recency** (0-100 points): Recently visited items score higher
-  - **Extension Usage** (0-50 points): Bonus for items clicked through the extension
   - **Bookmark Bonus** (+50 points): Bookmarked items get a scoring boost
 
 - **Advanced Filtering**: Filter items by:
@@ -28,11 +27,10 @@ A Chrome extension that shows your **bookmarks AND browsing history** combined a
 - **Hide Items**:
   - Hover over any item to reveal a hide button (✕)
   - Click to hide unwanted items from the list
-  - Hidden items won't appear until you click "Reset Hidden"
+  - Hidden items won't appear until you reset settings
 
-- **Management Options**:
-  - **Reset Hidden**: Restore all hidden items back to the list
-  - **Clear History**: Clear usage tracking data
+- **Management**:
+  - **Reset Settings**: Restore all hidden items back to the list
 
 ## Installation
 
@@ -55,9 +53,9 @@ Since this is an unpacked extension, follow these steps to install:
 5. **Grant Permissions**:
    - The extension will request permissions for:
      - `bookmarks`: To read your bookmarks
-     - `history`: To check browser history for visited bookmarks
-     - `storage`: To store usage tracking data
-     - `tabs`: To open bookmarks in new tabs
+     - `history`: To check browser history for visited pages
+     - `storage`: To store hidden items
+     - `tabs`: To open pages in new tabs
 
 6. **Pin the Extension** (Optional):
    - Click the puzzle piece icon in Chrome toolbar
@@ -68,54 +66,54 @@ Since this is an unpacked extension, follow these steps to install:
 
 1. **Click the extension icon** in your Chrome toolbar to open the popup
 
-2. **Browse your bookmarks** sorted by recently used:
-   - Bookmarks you've clicked through the extension appear first
-   - Bookmarks you've visited (from browser history) appear next
-   - Newly created bookmarks appear after that
+2. **Browse items** sorted by smart scoring:
+   - Items are ranked by visit frequency + recency
+   - Bookmarked items get a bonus boost
+   - Use filter checkboxes to show/hide bookmarks, history, frequent, or recent items
 
-3. **Search bookmarks** using the search box at the top
+3. **Search** using the search box at the top
 
-4. **Click a bookmark** to open it in a new tab
+4. **Click an item** to open it in a new tab
 
-5. **Click a folder** to open Chrome's bookmark manager at that folder
+5. **Hide items** by hovering and clicking the ✕ button
 
-6. **Clear history** using the "Clear History" button to reset usage tracking (note: browser history data will still be used)
+6. **Reset settings** to restore all hidden items
 
 ## How It Works
 
-The extension uses three sources of data to determine bookmark usage:
+The extension uses browser history data to rank items:
 
-1. **Extension Tracking**: Tracks when you open bookmarks through the extension popup
-2. **Browser History**: Checks Chrome's history to see when you last visited each bookmarked URL
-3. **Creation Date**: Uses the bookmark's creation timestamp as a fallback
+1. **Browser History**: Reads visit counts and last visit times from Chrome's history
+2. **Bookmarks**: Identifies which URLs are bookmarked for the bonus scoring
+3. **Smart Scoring**: Combines frequency + recency + bookmark bonus
 
-This multi-layered approach ensures that even if you haven't used the extension much, your bookmarks are still sorted meaningfully based on your actual browsing behavior.
+All data comes from your existing browser history - no additional tracking needed!
 
 ## Privacy
 
-All usage tracking data is stored locally in Chrome's storage. No data is sent to external servers. The extension only reads:
+No tracking! The extension only reads existing browser data locally:
 - Your bookmarks
-- Browser history for bookmarked URLs only
-- Local usage tracking data
+- Your browser history
+- Hidden items (stored locally)
+
+No data is sent to external servers.
 
 ## Files Structure
 
 ```
 recently_used_bookmark/
 ├── manifest.json       # Extension configuration
-├── background.js       # Background script for tracking usage
 ├── popup.html         # Extension popup interface
 ├── popup.css          # Popup styling
 ├── popup.js           # Popup logic and display
 └── README.md          # This file
 ```
 
-## Icons
+## Notes
 
-Note: This extension currently references icon files (icon16.png, icon48.png, icon128.png) that need to be created. You can:
-- Create simple bookmark icons using any image editor
-- Use free icon resources
-- Or temporarily comment out the icon references in manifest.json
+- The extension uses your existing browser history - no additional tracking
+- Hidden items are stored in local Chrome storage
+- Folders are always sorted to the bottom of the list
 
 ## Browser Compatibility
 

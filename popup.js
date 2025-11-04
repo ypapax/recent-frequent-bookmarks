@@ -1,7 +1,6 @@
 // Popup script to display sorted bookmarks and history
 
 let allItems = [];
-let bookmarkUsage = {};
 let bookmarkUrlMap = new Map(); // Map URLs to bookmark IDs
 let hiddenItems = new Set(); // Set of hidden URLs
 
@@ -35,31 +34,21 @@ function setupEventListeners() {
     }
   });
 
-  // Reset hidden button
+  // Reset settings button
   const resetHiddenButton = document.getElementById('resetHidden');
   resetHiddenButton.addEventListener('click', async () => {
-    if (confirm('Are you sure you want to show all hidden items?')) {
+    if (confirm('Are you sure you want to reset all settings?\n\nThis will show all hidden items.')) {
       await chrome.storage.local.remove('hiddenItems');
       hiddenItems.clear();
       applyFilters();
-    }
-  });
-
-  // Clear tracking button
-  const clearButton = document.getElementById('clearHistory');
-  clearButton.addEventListener('click', async () => {
-    if (confirm('Are you sure you want to clear the extension tracking data?\n\nThis will reset click counts tracked by this extension.\nYour browser history will NOT be affected.')) {
-      await chrome.runtime.sendMessage({ action: 'clearHistory' });
-      await loadData();
     }
   });
 }
 
 async function loadData() {
   try {
-    // Load usage data and hidden items
-    const result = await chrome.storage.local.get(['bookmarkUsage', 'hiddenItems']);
-    bookmarkUsage = result.bookmarkUsage || {};
+    // Load hidden items
+    const result = await chrome.storage.local.get('hiddenItems');
     hiddenItems = new Set(result.hiddenItems || []);
 
     // Get all bookmarks
@@ -204,6 +193,11 @@ function calculateScore(item) {
   const now = Date.now();
   const ONE_DAY = 24 * 60 * 60 * 1000;
 
+  // Folders get minimal score (sort to bottom)
+  if (item.isFolder) {
+    return 0;
+  }
+
   // Component 1: Visit frequency (0-100 points)
   const visitCount = item.visitCount || 0;
   const frequencyScore = Math.min(100, visitCount * 2); // 2 points per visit, max 100
@@ -219,24 +213,10 @@ function calculateScore(item) {
   else if (daysSinceVisit < 180) recencyScore = 20;
   else recencyScore = 10;
 
-  // Component 3: Extension usage bonus (0-50 points)
-  const usage = bookmarkUsage[item.id];
-  let extensionScore = 0;
-  if (usage) {
-    const extensionDaysSince = (now - usage.lastUsed) / ONE_DAY;
-    extensionScore = 30 + Math.min(20, usage.useCount * 5); // Base 30 + up to 20 for count
-    if (extensionDaysSince < 1) extensionScore += 20; // Recent bonus
-  }
-
-  // Component 4: Bookmark bonus (50 points)
+  // Component 3: Bookmark bonus (50 points)
   const bookmarkBonus = item.isBookmark && !item.isFolder ? 50 : 0;
 
-  // Folders get special handling (always sort to bottom unless actively used)
-  if (item.isFolder) {
-    return extensionScore; // Only extension score matters for folders
-  }
-
-  score = frequencyScore + recencyScore + extensionScore + bookmarkBonus;
+  score = frequencyScore + recencyScore + bookmarkBonus;
 
   return score;
 }
@@ -371,7 +351,7 @@ function createItemElement(item) {
 
 async function hideItem(itemId) {
   // Ask for confirmation
-  if (!confirm('Are you sure you want to hide this item?\n\nYou can restore it later by clicking "Reset Hidden".')) {
+  if (!confirm('Are you sure you want to hide this item?\n\nYou can restore it later by clicking "Reset Settings".')) {
     return;
   }
 
