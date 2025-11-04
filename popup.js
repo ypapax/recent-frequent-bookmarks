@@ -22,7 +22,8 @@ function setupEventListeners() {
     'filterBookmarks',
     'filterHistory',
     'filterFrequent',
-    'filterRecent'
+    'filterRecent',
+    'filterTimeOfDay'
   ];
 
   filterCheckboxes.forEach(id => {
@@ -42,11 +43,12 @@ function setupEventListeners() {
       await chrome.storage.local.remove(['hiddenItems', 'filterStates']);
       hiddenItems.clear();
 
-      // Reset checkboxes to default (all checked)
+      // Reset checkboxes to default (all checked except time of day)
       document.getElementById('filterBookmarks').checked = true;
       document.getElementById('filterHistory').checked = true;
       document.getElementById('filterFrequent').checked = true;
       document.getElementById('filterRecent').checked = true;
+      document.getElementById('filterTimeOfDay').checked = false;
 
       applyFilters();
     }
@@ -58,7 +60,8 @@ async function saveFilterStates() {
     bookmarks: document.getElementById('filterBookmarks').checked,
     history: document.getElementById('filterHistory').checked,
     frequent: document.getElementById('filterFrequent').checked,
-    recent: document.getElementById('filterRecent').checked
+    recent: document.getElementById('filterRecent').checked,
+    timeOfDay: document.getElementById('filterTimeOfDay').checked
   };
 
   await chrome.storage.local.set({ filterStates });
@@ -76,6 +79,7 @@ async function loadData() {
       document.getElementById('filterHistory').checked = result.filterStates.history ?? true;
       document.getElementById('filterFrequent').checked = result.filterStates.frequent ?? true;
       document.getElementById('filterRecent').checked = result.filterStates.recent ?? true;
+      document.getElementById('filterTimeOfDay').checked = result.filterStates.timeOfDay ?? false;
     }
 
     // Get all bookmarks
@@ -162,7 +166,8 @@ function mergeBookmarksAndHistory(bookmarks, historyItems) {
         isBookmark: true,
         isFolder: false,
         visitCount: historyItem?.visitCount || 0,
-        lastVisitTime: historyItem?.lastVisitTime || bookmark.dateAdded
+        lastVisitTime: historyItem?.lastVisitTime || bookmark.dateAdded,
+        visits: historyItem?.visits || []
       });
     }
   });
@@ -215,7 +220,7 @@ function flattenBookmarks(node, result, path = []) {
   }
 }
 
-function calculateScore(item, useFrequency = true, useRecency = true) {
+function calculateScore(item, useFrequency = true, useRecency = true, useTimeOfDay = false) {
   let score = 0;
   const now = Date.now();
   const ONE_DAY = 24 * 60 * 60 * 1000;
@@ -245,15 +250,47 @@ function calculateScore(item, useFrequency = true, useRecency = true) {
     else recencyScore = 10;
   }
 
-  score = frequencyScore + recencyScore;
+  // Component 3: Time of day score (0-100 points) - only if enabled
+  let timeOfDayScore = 0;
+  if (useTimeOfDay && item.visits && item.visits.length > 0) {
+    const currentHour = new Date().getHours();
+    const currentMinute = new Date().getMinutes();
+    const currentTimeInMinutes = currentHour * 60 + currentMinute;
+
+    // Count visits within ±1 hour of current time
+    let matchingVisits = 0;
+    item.visits.forEach(visit => {
+      const visitDate = new Date(visit.visitTime);
+      const visitHour = visitDate.getHours();
+      const visitMinute = visitDate.getMinutes();
+      const visitTimeInMinutes = visitHour * 60 + visitMinute;
+
+      // Check if within ±60 minutes (with wrap-around for midnight)
+      const diff = Math.abs(currentTimeInMinutes - visitTimeInMinutes);
+      const wrapDiff = 1440 - diff; // 1440 = 24 hours in minutes
+      const minDiff = Math.min(diff, wrapDiff);
+
+      if (minDiff <= 60) {
+        matchingVisits++;
+      }
+    });
+
+    // Score based on percentage of visits at this time
+    if (item.visits.length > 0) {
+      const percentage = matchingVisits / item.visits.length;
+      timeOfDayScore = percentage * 100; // 0-100 based on how often visited at this time
+    }
+  }
+
+  score = frequencyScore + recencyScore + timeOfDayScore;
 
   return score;
 }
 
-function sortAndDisplayItems(items, useFrequency = true, useRecency = true) {
+function sortAndDisplayItems(items, useFrequency = true, useRecency = true, useTimeOfDay = false) {
   // Calculate scores for all items based on active filters
   items.forEach(item => {
-    item.score = calculateScore(item, useFrequency, useRecency);
+    item.score = calculateScore(item, useFrequency, useRecency, useTimeOfDay);
   });
 
   // Sort by score (highest first)
@@ -462,8 +499,11 @@ function applyFilters() {
     return true;
   });
 
+  // Get time of day filter state
+  const showTimeOfDay = document.getElementById('filterTimeOfDay').checked;
+
   // Pass the filter states to sorting so it knows which scoring components to use
-  sortAndDisplayItems(filtered, showFrequent, showRecent);
+  sortAndDisplayItems(filtered, showFrequent, showRecent, showTimeOfDay);
 }
 
 function getTimeAgo(timestamp) {
