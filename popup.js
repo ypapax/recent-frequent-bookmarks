@@ -23,7 +23,8 @@ function setupEventListeners() {
     'filterHistory',
     'filterFrequent',
     'filterRecent',
-    'filterTimeOfDay'
+    'filterTimeOfDay',
+    'groupByDomain'
   ];
 
   filterCheckboxes.forEach(id => {
@@ -43,12 +44,13 @@ function setupEventListeners() {
       await chrome.storage.local.remove(['hiddenItems', 'filterStates']);
       hiddenItems.clear();
 
-      // Reset checkboxes to default (all checked except time of day)
+      // Reset checkboxes to default (all checked except time of day and grouping)
       document.getElementById('filterBookmarks').checked = true;
       document.getElementById('filterHistory').checked = true;
       document.getElementById('filterFrequent').checked = true;
       document.getElementById('filterRecent').checked = true;
       document.getElementById('filterTimeOfDay').checked = false;
+      document.getElementById('groupByDomain').checked = false;
 
       applyFilters();
     }
@@ -61,7 +63,8 @@ async function saveFilterStates() {
     history: document.getElementById('filterHistory').checked,
     frequent: document.getElementById('filterFrequent').checked,
     recent: document.getElementById('filterRecent').checked,
-    timeOfDay: document.getElementById('filterTimeOfDay').checked
+    timeOfDay: document.getElementById('filterTimeOfDay').checked,
+    groupByDomain: document.getElementById('groupByDomain').checked
   };
 
   await chrome.storage.local.set({ filterStates });
@@ -80,6 +83,7 @@ async function loadData() {
       document.getElementById('filterFrequent').checked = result.filterStates.frequent ?? true;
       document.getElementById('filterRecent').checked = result.filterStates.recent ?? true;
       document.getElementById('filterTimeOfDay').checked = result.filterStates.timeOfDay ?? false;
+      document.getElementById('groupByDomain').checked = result.filterStates.groupByDomain ?? false;
     }
 
     // Get all bookmarks
@@ -183,7 +187,8 @@ function mergeBookmarksAndHistory(bookmarks, historyItems) {
         isBookmark: false,
         isFolder: false,
         visitCount: historyItem.visitCount,
-        lastVisitTime: historyItem.lastVisitTime
+        lastVisitTime: historyItem.lastVisitTime,
+        visits: historyItem.visits || []
       });
     }
   });
@@ -220,7 +225,7 @@ function flattenBookmarks(node, result, path = []) {
   }
 }
 
-function calculateScore(item, useFrequency = true, useRecency = true, useTimeOfDay = false) {
+function calculateScore(item, useFrequency = true, useRecency = true) {
   let score = 0;
   const now = Date.now();
   const ONE_DAY = 24 * 60 * 60 * 1000;
@@ -250,47 +255,47 @@ function calculateScore(item, useFrequency = true, useRecency = true, useTimeOfD
     else recencyScore = 10;
   }
 
-  // Component 3: Time of day score (0-100 points) - only if enabled
-  let timeOfDayScore = 0;
-  if (useTimeOfDay && item.visits && item.visits.length > 0) {
-    const currentHour = new Date().getHours();
-    const currentMinute = new Date().getMinutes();
-    const currentTimeInMinutes = currentHour * 60 + currentMinute;
-
-    // Count visits within ±1 hour of current time
-    let matchingVisits = 0;
-    item.visits.forEach(visit => {
-      const visitDate = new Date(visit.visitTime);
-      const visitHour = visitDate.getHours();
-      const visitMinute = visitDate.getMinutes();
-      const visitTimeInMinutes = visitHour * 60 + visitMinute;
-
-      // Check if within ±60 minutes (with wrap-around for midnight)
-      const diff = Math.abs(currentTimeInMinutes - visitTimeInMinutes);
-      const wrapDiff = 1440 - diff; // 1440 = 24 hours in minutes
-      const minDiff = Math.min(diff, wrapDiff);
-
-      if (minDiff <= 60) {
-        matchingVisits++;
-      }
-    });
-
-    // Score based on percentage of visits at this time
-    if (item.visits.length > 0) {
-      const percentage = matchingVisits / item.visits.length;
-      timeOfDayScore = percentage * 100; // 0-100 based on how often visited at this time
-    }
-  }
-
-  score = frequencyScore + recencyScore + timeOfDayScore;
+  score = frequencyScore + recencyScore;
 
   return score;
 }
 
-function sortAndDisplayItems(items, useFrequency = true, useRecency = true, useTimeOfDay = false) {
-  // Calculate scores for all items based on active filters
+// Check if item matches current time of day (±1 hour window)
+function matchesCurrentTimeOfDay(item) {
+  if (!item.visits || item.visits.length === 0) {
+    return false;
+  }
+
+  const currentHour = new Date().getHours();
+  const currentMinute = new Date().getMinutes();
+  const currentTimeInMinutes = currentHour * 60 + currentMinute;
+
+  // Count visits within ±1 hour of current time
+  let matchingVisits = 0;
+  item.visits.forEach(visit => {
+    const visitDate = new Date(visit.visitTime);
+    const visitHour = visitDate.getHours();
+    const visitMinute = visitDate.getMinutes();
+    const visitTimeInMinutes = visitHour * 60 + visitMinute;
+
+    // Check if within ±60 minutes (with wrap-around for midnight)
+    const diff = Math.abs(currentTimeInMinutes - visitTimeInMinutes);
+    const wrapDiff = 1440 - diff; // 1440 = 24 hours in minutes
+    const minDiff = Math.min(diff, wrapDiff);
+
+    if (minDiff <= 60) {
+      matchingVisits++;
+    }
+  });
+
+  // Consider it a match if at least 2 visits or 20% of visits were around this time
+  return matchingVisits >= 2 || (matchingVisits / item.visits.length) >= 0.2;
+}
+
+function sortAndDisplayItems(items, useFrequency = true, useRecency = true) {
+  // Calculate scores for all items based on active filters (no time-of-day in scoring)
   items.forEach(item => {
-    item.score = calculateScore(item, useFrequency, useRecency, useTimeOfDay);
+    item.score = calculateScore(item, useFrequency, useRecency);
   });
 
   // Sort by score (highest first)
@@ -326,10 +331,93 @@ function displayItems(items) {
 
   container.innerHTML = '';
 
-  items.forEach(item => {
-    const element = createItemElement(item);
-    container.appendChild(element);
-  });
+  // Check if domain grouping is enabled
+  const groupByDomain = document.getElementById('groupByDomain')?.checked || false;
+
+  if (groupByDomain) {
+    // Group items by domain
+    const domainGroups = new Map();
+
+    items.forEach(item => {
+      if (item.isFolder) {
+        // Folders go to a special group
+        if (!domainGroups.has('_folders')) {
+          domainGroups.set('_folders', []);
+        }
+        domainGroups.get('_folders').push(item);
+      } else if (item.url) {
+        const domain = getDomain(item.url);
+        if (!domainGroups.has(domain)) {
+          domainGroups.set(domain, []);
+        }
+        domainGroups.get(domain).push(item);
+      }
+    });
+
+    // Display groups
+    domainGroups.forEach((groupItems, domain) => {
+      if (domain === '_folders') {
+        groupItems.forEach(item => {
+          const element = createItemElement(item);
+          container.appendChild(element);
+        });
+      } else {
+        // Only show the top item (first item = highest score)
+        const topItem = groupItems[0];
+        const otherCount = groupItems.length - 1;
+
+        // Create domain header with expand/collapse functionality
+        const header = document.createElement('div');
+        header.className = 'domain-header';
+        header.innerHTML = `
+          <span class="domain-name">🌐 ${escapeHtml(domain)}</span>
+          <span class="domain-count">${otherCount > 0 ? `+${otherCount} more` : ''}</span>
+          <span class="expand-icon">${otherCount > 0 ? '▼' : ''}</span>
+        `;
+
+        // Create collapsible container for all items
+        const groupContainer = document.createElement('div');
+        groupContainer.className = 'domain-group';
+
+        // Add top item
+        const topElement = createItemElement(topItem);
+        topElement.classList.add('top-item');
+        groupContainer.appendChild(topElement);
+
+        // Add other items (collapsed by default)
+        if (otherCount > 0) {
+          const otherItemsContainer = document.createElement('div');
+          otherItemsContainer.className = 'other-items collapsed';
+
+          groupItems.slice(1).forEach(item => {
+            const element = createItemElement(item);
+            element.classList.add('other-item');
+            otherItemsContainer.appendChild(element);
+          });
+
+          groupContainer.appendChild(otherItemsContainer);
+
+          // Toggle expansion on header click
+          header.style.cursor = 'pointer';
+          header.addEventListener('click', () => {
+            const isCollapsed = otherItemsContainer.classList.contains('collapsed');
+            otherItemsContainer.classList.toggle('collapsed');
+            const expandIcon = header.querySelector('.expand-icon');
+            expandIcon.textContent = isCollapsed ? '▲' : '▼';
+          });
+        }
+
+        container.appendChild(header);
+        container.appendChild(groupContainer);
+      }
+    });
+  } else {
+    // Normal ungrouped display
+    items.forEach(item => {
+      const element = createItemElement(item);
+      container.appendChild(element);
+    });
+  }
 }
 
 function createItemElement(item) {
@@ -344,16 +432,22 @@ function createItemElement(item) {
   } else {
     itemClass += ' history';
   }
+
   div.className = itemClass;
 
   // Build metadata text
   let metaText = '';
   const visitCount = item.visitCount || 0;
   const lastVisit = item.lastVisitTime || item.dateAdded || 0;
+  const showTimeOfDay = document.getElementById('filterTimeOfDay')?.checked || false;
+  const isTimeMatch = showTimeOfDay && matchesCurrentTimeOfDay(item);
 
   if (visitCount > 0 && lastVisit) {
     const timeAgo = getTimeAgo(lastVisit);
-    metaText = `${visitCount} visit${visitCount > 1 ? 's' : ''} • ${timeAgo}`;
+    const visitTime = formatVisitTime(lastVisit);
+    // Make time bold if it matches current time-of-day
+    const timeDisplay = isTimeMatch ? `<strong>${visitTime}</strong>` : visitTime;
+    metaText = `${visitCount} visit${visitCount > 1 ? 's' : ''} • ${timeAgo} • ${timeDisplay}`;
   } else if (item.dateAdded) {
     const timeAgo = getTimeAgo(item.dateAdded);
     metaText = `Created ${timeAgo}`;
@@ -389,6 +483,7 @@ function createItemElement(item) {
     });
   } else {
     const favicon = getFaviconUrl(item.url);
+    const domain = getDomain(item.url);
 
     div.innerHTML = `
       <img class="bookmark-favicon" src="${favicon}" alt="" onerror="this.style.display='none'">
@@ -397,32 +492,67 @@ function createItemElement(item) {
         <div class="bookmark-url">${escapeHtml(item.url)}</div>
       </div>
       <div class="bookmark-meta">${metaText}</div>
-      <button class="hide-button" title="Hide this item">✕</button>
+      <div class="hide-menu">
+        <button class="hide-button" title="Hide options">✕</button>
+        <div class="hide-dropdown">
+          <div class="hide-option" data-type="url">Hide this URL</div>
+          <div class="hide-option" data-type="domain">Hide all from ${escapeHtml(domain)}</div>
+        </div>
+      </div>
     `;
 
+    const hideMenu = div.querySelector('.hide-menu');
     const hideButton = div.querySelector('.hide-button');
+    const hideDropdown = div.querySelector('.hide-dropdown');
+    const hideOptions = div.querySelectorAll('.hide-option');
+
     hideButton.addEventListener('click', (e) => {
       e.stopPropagation();
-      hideItem(item.url);
+      hideDropdown.classList.toggle('show');
     });
 
-    div.addEventListener('click', () => {
-      chrome.tabs.create({ url: item.url });
-      window.close();
+    hideOptions.forEach(option => {
+      option.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const type = option.dataset.type;
+        if (type === 'url') {
+          hideItem(item.url, 'url');
+        } else if (type === 'domain') {
+          hideItem(domain, 'domain');
+        }
+        hideDropdown.classList.remove('show');
+      });
+    });
+
+    div.addEventListener('click', (e) => {
+      if (!hideMenu.contains(e.target)) {
+        chrome.tabs.create({ url: item.url });
+        window.close();
+      }
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', () => {
+      hideDropdown.classList.remove('show');
     });
   }
 
   return div;
 }
 
-async function hideItem(itemId) {
+async function hideItem(itemId, type = 'url') {
   // Ask for confirmation
-  if (!confirm('Are you sure you want to hide this item?\n\nYou can restore it later by clicking "Reset Settings".')) {
+  const message = type === 'domain'
+    ? `Are you sure you want to hide all items from this domain?\n\nYou can restore them later by clicking "Reset Settings".`
+    : `Are you sure you want to hide this item?\n\nYou can restore it later by clicking "Reset Settings".`;
+
+  if (!confirm(message)) {
     return;
   }
 
-  // Add to hidden items set
-  hiddenItems.add(itemId);
+  // Add to hidden items set with type prefix
+  const hiddenKey = type === 'domain' ? `domain:${itemId}` : itemId;
+  hiddenItems.add(hiddenKey);
 
   // Save to storage
   await chrome.storage.local.set({
@@ -431,6 +561,15 @@ async function hideItem(itemId) {
 
   // Re-apply filters to remove the item from view
   applyFilters();
+}
+
+function getDomain(url) {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.hostname;
+  } catch {
+    return url;
+  }
 }
 
 function openFolder(folderId) {
@@ -458,9 +597,15 @@ function applyFilters() {
   const FREQUENT_THRESHOLD = 10; // 10+ visits = frequent
 
   let filtered = allItems.filter(item => {
-    // Filter out hidden items
+    // Filter out hidden items (URL, folder, or domain)
     if (item.url && hiddenItems.has(item.url)) return false;
     if (item.id && hiddenItems.has(item.id)) return false; // For folders
+
+    // Check if domain is hidden
+    if (item.url) {
+      const domain = getDomain(item.url);
+      if (hiddenItems.has(`domain:${domain}`)) return false;
+    }
 
     // Apply type filters
     if (item.isBookmark && !item.isFolder && !showBookmarks) return false;
@@ -499,11 +644,9 @@ function applyFilters() {
     return true;
   });
 
-  // Get time of day filter state
-  const showTimeOfDay = document.getElementById('filterTimeOfDay').checked;
-
   // Pass the filter states to sorting so it knows which scoring components to use
-  sortAndDisplayItems(filtered, showFrequent, showRecent, showTimeOfDay);
+  // Note: time-of-day is only for highlighting, not for scoring
+  sortAndDisplayItems(filtered, showFrequent, showRecent);
 }
 
 function getTimeAgo(timestamp) {
@@ -516,6 +659,19 @@ function getTimeAgo(timestamp) {
   if (seconds < 2592000) return `${Math.floor(seconds / 604800)}w ago`;
   if (seconds < 31536000) return `${Math.floor(seconds / 2592000)}mo ago`;
   return `${Math.floor(seconds / 31536000)}y ago`;
+}
+
+function formatVisitTime(timestamp) {
+  const date = new Date(timestamp);
+  let hours = date.getHours();
+  const minutes = date.getMinutes();
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+
+  hours = hours % 12;
+  hours = hours ? hours : 12; // 0 should be 12
+  const minutesStr = minutes < 10 ? '0' + minutes : minutes;
+
+  return `${hours}:${minutesStr} ${ampm}`;
 }
 
 function escapeHtml(text) {

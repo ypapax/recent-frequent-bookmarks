@@ -15,26 +15,39 @@
         <button id="resetHidden" title="Reset all settings (show hidden items)">Reset Settings</button>
       </div>
       <div class="filters">
-        <label class="filter-checkbox">
-          <input type="checkbox" id="filterBookmarks" checked>
-          <span>⭐ Bookmarks</span>
-        </label>
-        <label class="filter-checkbox">
-          <input type="checkbox" id="filterHistory" checked>
-          <span>🕐 History</span>
-        </label>
-        <label class="filter-checkbox">
-          <input type="checkbox" id="filterFrequent" checked>
-          <span>🔥 Frequent</span>
-        </label>
-        <label class="filter-checkbox">
-          <input type="checkbox" id="filterRecent" checked>
-          <span>⏱️ Recent</span>
-        </label>
-        <label class="filter-checkbox">
-          <input type="checkbox" id="filterTimeOfDay">
-          <span>🕒 Time of Day</span>
-        </label>
+        <div class="filter-group">
+          <div class="filter-group-label">🔍 Filter:</div>
+          <label class="filter-checkbox">
+            <input type="checkbox" id="filterBookmarks" checked>
+            <span>⭐ Bookmarks</span>
+          </label>
+          <label class="filter-checkbox">
+            <input type="checkbox" id="filterHistory" checked>
+            <span>🕐 History</span>
+          </label>
+          <label class="filter-checkbox">
+            <input type="checkbox" id="filterFrequent" checked>
+            <span>🔥 Frequent</span>
+          </label>
+          <label class="filter-checkbox">
+            <input type="checkbox" id="filterRecent" checked>
+            <span>⏱️ Recent</span>
+          </label>
+        </div>
+        <div class="filter-group">
+          <div class="filter-group-label">📊 Sort:</div>
+          <label class="filter-checkbox">
+            <input type="checkbox" id="filterTimeOfDay">
+            <span>🕒 Time of Day</span>
+          </label>
+        </div>
+        <div class="filter-group">
+          <div class="filter-group-label">📁 Display:</div>
+          <label class="filter-checkbox">
+            <input type="checkbox" id="groupByDomain">
+            <span>🌐 Group by Domain</span>
+          </label>
+        </div>
       </div>
     </div>
     <div id="bookmarksList" class="bookmarks-list">
