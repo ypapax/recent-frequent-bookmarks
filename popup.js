@@ -245,10 +245,7 @@ function calculateScore(item, useFrequency = true, useRecency = true) {
     else recencyScore = 10;
   }
 
-  // Component 3: Bookmark bonus (50 points)
-  const bookmarkBonus = item.isBookmark && !item.isFolder ? 50 : 0;
-
-  score = frequencyScore + recencyScore + bookmarkBonus;
+  score = frequencyScore + recencyScore;
 
   return score;
 }

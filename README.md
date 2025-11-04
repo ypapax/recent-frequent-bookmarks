@@ -8,7 +8,7 @@ A Chrome extension that shows your **bookmarks AND browsing history** combined a
 - **Smart Scoring Algorithm**: Items are ranked by browser history data:
   - **Visit Frequency** (0-100 points): More visits = higher score
   - **Recency** (0-100 points): Recently visited items score higher
-  - **Bookmark Bonus** (+50 points): Bookmarked items get a scoring boost
+  - Bookmarks and history items are sorted equally based on actual usage
 
 - **Advanced Filtering**: Filter items by:
   - ⭐ **Bookmarks**: Show only bookmarked items
@@ -84,8 +84,8 @@ Since this is an unpacked extension, follow these steps to install:
 The extension uses browser history data to rank items:
 
 1. **Browser History**: Reads visit counts and last visit times from Chrome's history
-2. **Bookmarks**: Identifies which URLs are bookmarked for the bonus scoring
-3. **Smart Scoring**: Combines frequency + recency + bookmark bonus
+2. **Smart Scoring**: Combines frequency + recency
+3. **Fair Sorting**: Bookmarks and history items are sorted equally by actual usage
 
 All data comes from your existing browser history - no additional tracking needed!
 
