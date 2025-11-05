@@ -306,8 +306,8 @@ function matchesCurrentTimeOfDay(item) {
     }
   });
 
-  // Consider it a match if at least 2 visits or 20% of visits were around this time
-  return matchingVisits >= 2 || (matchingVisits / item.visits.length) >= 0.2;
+  // Consider it a match if at least 1 visit or 20% of visits were around this time
+  return matchingVisits >= 1 || (matchingVisits / item.visits.length) >= 0.2;
 }
 
 function sortAndDisplayItems(items, useFrequency = true, useRecency = true) {
