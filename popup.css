@@ -136,7 +136,7 @@ h1 {
   transition: all 0.2s;
   border: 1px solid #e0e0e0;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
   position: relative;
 }
@@ -154,8 +154,7 @@ h1 {
 .hide-menu {
   position: absolute;
   right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
+  top: 10px;
   z-index: 10;
 }
 
@@ -251,13 +250,15 @@ h1 {
 .bookmark-content {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .bookmark-title {
   font-size: 14px;
   color: #333;
   font-weight: 500;
-  margin-bottom: 2px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -274,6 +275,8 @@ h1 {
 .bookmark-meta {
   font-size: 11px;
   color: #999;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 

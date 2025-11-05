@@ -490,8 +490,8 @@ function createItemElement(item) {
       <div class="bookmark-content">
         <div class="bookmark-title">${badge}${escapeHtml(item.title)}</div>
         <div class="bookmark-url">${escapeHtml(item.url)}</div>
+        <div class="bookmark-meta">${metaText}</div>
       </div>
-      <div class="bookmark-meta">${metaText}</div>
       <div class="hide-menu">
         <button class="hide-button" title="Hide options">✕</button>
         <div class="hide-dropdown">
