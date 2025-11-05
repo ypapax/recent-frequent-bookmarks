@@ -82,6 +82,12 @@ function setupEventListeners() {
       applyFilters();
     }
   });
+
+  // Ignored items search
+  const ignoredSearch = document.getElementById('ignoredSearch');
+  ignoredSearch.addEventListener('input', () => {
+    loadIgnoredItems(ignoredSearch.value);
+  });
 }
 
 async function saveFilterStates() {
@@ -106,7 +112,7 @@ async function saveSearchState() {
   await chrome.storage.local.set({ searchQuery });
 }
 
-function loadIgnoredItems() {
+function loadIgnoredItems(searchFilter = '') {
   const ignoredItemsList = document.getElementById('ignoredItemsList');
   const unignoreAllButton = document.getElementById('unignoreAll');
 
@@ -122,7 +128,19 @@ function loadIgnoredItems() {
   // Convert Set to array and sort
   const sortedItems = Array.from(hiddenItems).sort();
 
-  sortedItems.forEach(item => {
+  // Filter items based on search query
+  const searchLower = searchFilter.toLowerCase();
+  const filteredItems = sortedItems.filter(item => {
+    const itemText = item.startsWith('domain:') ? item.substring(7) : item;
+    return itemText.toLowerCase().includes(searchLower);
+  });
+
+  if (filteredItems.length === 0) {
+    ignoredItemsList.innerHTML = '<div class="empty-message">No matching ignored items</div>';
+    return;
+  }
+
+  filteredItems.forEach(item => {
     const itemDiv = document.createElement('div');
     itemDiv.className = 'ignored-item';
 
@@ -145,7 +163,8 @@ function loadIgnoredItems() {
     unignoreButton.addEventListener('click', async () => {
       hiddenItems.delete(item);
       await chrome.storage.local.set({ hiddenItems: Array.from(hiddenItems) });
-      loadIgnoredItems();
+      const currentSearch = document.getElementById('ignoredSearch').value;
+      loadIgnoredItems(currentSearch);
       applyFilters();
     });
 

@@ -546,6 +546,22 @@ h1 {
 
 .ignored-items-actions {
   margin-bottom: 12px;
+  display: flex;
+  gap: 8px;
+}
+
+#ignoredSearch {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+#ignoredSearch:focus {
+  border-color: #4285f4;
 }
 
 .unignore-all-button {
