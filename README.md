@@ -3,7 +3,7 @@
 Quick access to your **most recent and frequently used bookmarks** with smart sorting, time-of-day highlighting, and powerful search. A productivity-focused bookmark manager for Chrome.
 
 [![Chrome Web Store](https://img.shields.io/badge/Chrome-Web%20Store-blue)](https://chrome.google.com/webstore)
-[![Privacy Policy](https://img.shields.io/badge/Privacy-First-green)](https://github.com/ypapax/recently_used_bookmark/blob/master/PRIVACY_POLICY.md)
+[![Privacy Policy](https://img.shields.io/badge/Privacy-First-green)](https://github.com/ypapax/recent-frequent-bookmarks/blob/master/PRIVACY_POLICY.md)
 
 ## Why Recent & Frequent?
 
@@ -110,14 +110,14 @@ bookmark manager, chrome extension, recent bookmarks, frequent sites, quick acce
 
 ## Contributing
 
-Found a bug or have a feature request? [Open an issue](https://github.com/ypapax/recently_used_bookmark/issues)
+Found a bug or have a feature request? [Open an issue](https://github.com/ypapax/recent-frequent-bookmarks/issues)
 
 ## Author
 
 Created by **Maxim Yefremov**
 
 - GitHub: [@ypapax](https://github.com/ypapax)
-- Issues: [Create Issue](https://github.com/ypapax/recently_used_bookmark/issues)
+- Issues: [Create Issue](https://github.com/ypapax/recent-frequent-bookmarks/issues)
 
 ## License
 
@@ -132,6 +132,6 @@ Free to use and modify for personal use.
 
 ⭐ **Like this extension?** Please star the repo and leave a review on the Chrome Web Store!
 
-🐛 **Found a bug?** [Report it here](https://github.com/ypapax/recently_used_bookmark/issues)
+🐛 **Found a bug?** [Report it here](https://github.com/ypapax/recent-frequent-bookmarks/issues)
 
 📧 **Questions?** Check our [Privacy Policy](PRIVACY_POLICY.md) or create an issue

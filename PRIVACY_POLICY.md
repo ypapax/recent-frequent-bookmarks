@@ -43,7 +43,7 @@ All data processing happens **locally on your device**:
 We may update this privacy policy from time to time. Any changes will be posted in the extension's store listing and README file.
 
 ## Contact
-If you have questions about this privacy policy, please [create an issue on our GitHub repository](https://github.com/ypapax/recently_used_bookmark/issues).
+If you have questions about this privacy policy, please [create an issue on our GitHub repository](https://github.com/ypapax/recent-frequent-bookmarks/issues).
 
 ## Your Rights
 You can:

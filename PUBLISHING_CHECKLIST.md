@@ -48,7 +48,7 @@ Take 1-5 screenshots of your extension in action:
 ### 5. Create ZIP File
 1. [ ] Create a folder with only these files:
    ```
-   recently_used_bookmark/
+   recent-frequent-bookmarks/
    ├── manifest.json
    ├── popup.html
    ├── popup.css
