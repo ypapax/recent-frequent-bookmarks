@@ -5,7 +5,7 @@
   "version": "1.2",
   "description": "Quick access to recent & frequent bookmarks sorted by usage. Smart time-of-day highlighting, powerful grouping, and instant search.",
   "author": "Maxim Yefremov",
-  "homepage_url": "https://github.com/ypapax/recently_used_bookmark_policy",
+  "homepage_url": "https://github.com/ypapax/recently_used_bookmark",
   "permissions": [
     "bookmarks",
     "storage",

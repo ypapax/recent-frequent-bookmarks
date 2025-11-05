@@ -3,7 +3,7 @@
 Quick access to your **most recent and frequently used bookmarks** with smart sorting, time-of-day highlighting, and powerful search. A productivity-focused bookmark manager for Chrome.
 
 [![Chrome Web Store](https://img.shields.io/badge/Chrome-Web%20Store-blue)](https://chrome.google.com/webstore)
-[![Privacy Policy](https://img.shields.io/badge/Privacy-First-green)](https://ypapax.github.io/recently_used_bookmark_policy/PRIVACY_POLICY)
+[![Privacy Policy](https://img.shields.io/badge/Privacy-First-green)](https://github.com/ypapax/recently_used_bookmark/blob/master/PRIVACY_POLICY.md)
 
 ## Why Recent & Frequent?
 
@@ -87,7 +87,7 @@ All processing happens **locally in your browser** - no data is sent anywhere.
 
 ## Privacy & Security
 
-Read our [Privacy Policy](https://ypapax.github.io/recently_used_bookmark_policy/PRIVACY_POLICY)
+Read our [Privacy Policy](PRIVACY_POLICY.md)
 
 **What we DON'T do:**
 - ❌ No data collection
@@ -110,14 +110,14 @@ bookmark manager, chrome extension, recent bookmarks, frequent sites, quick acce
 
 ## Contributing
 
-Found a bug or have a feature request? [Open an issue](https://github.com/ypapax/recently_used_bookmark_policy/issues)
+Found a bug or have a feature request? [Open an issue](https://github.com/ypapax/recently_used_bookmark/issues)
 
 ## Author
 
 Created by **Maxim Yefremov**
 
 - GitHub: [@ypapax](https://github.com/ypapax)
-- Privacy Policy Issues: [Create Issue](https://github.com/ypapax/recently_used_bookmark_policy/issues)
+- Issues: [Create Issue](https://github.com/ypapax/recently_used_bookmark/issues)
 
 ## License
 
@@ -132,6 +132,6 @@ Free to use and modify for personal use.
 
 ⭐ **Like this extension?** Please star the repo and leave a review on the Chrome Web Store!
 
-🐛 **Found a bug?** [Report it here](https://github.com/ypapax/recently_used_bookmark_policy/issues)
+🐛 **Found a bug?** [Report it here](https://github.com/ypapax/recently_used_bookmark/issues)
 
-📧 **Questions?** Check our [Privacy Policy](https://ypapax.github.io/recently_used_bookmark_policy/PRIVACY_POLICY) or create an issue
+📧 **Questions?** Check our [Privacy Policy](PRIVACY_POLICY.md) or create an issue
