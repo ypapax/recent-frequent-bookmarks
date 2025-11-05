@@ -5,7 +5,7 @@
 }
 
 body {
-  width: 450px;
+  width: 640px;
   min-height: 400px;
   max-height: 600px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
@@ -53,19 +53,19 @@ h1 {
 }
 
 .filters {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
   padding: 8px 0;
   border-top: 1px solid #e0e0e0;
   margin-top: 8px;
 }
 
-.filter-group {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
+.filters-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.filters-table td {
+  padding: 4px 8px;
+  vertical-align: middle;
 }
 
 .filter-group-label {
@@ -73,6 +73,7 @@ h1 {
   font-weight: 600;
   color: #5f6368;
   white-space: nowrap;
+  width: 90px;
 }
 
 .filter-checkbox {
@@ -85,7 +86,8 @@ h1 {
   user-select: none;
 }
 
-.filter-checkbox input[type="checkbox"] {
+.filter-checkbox input[type="checkbox"],
+.filter-checkbox input[type="radio"] {
   cursor: pointer;
   width: 16px;
   height: 16px;
@@ -97,6 +99,42 @@ h1 {
 
 .filter-checkbox span {
   white-space: nowrap;
+}
+
+.time-window-select {
+  padding: 4px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #5f6368;
+  background-color: #fff;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.time-window-select:focus {
+  border-color: #4285f4;
+}
+
+.time-window-select:hover {
+  border-color: #9aa0a6;
+}
+
+#settingsButton {
+  padding: 8px 17px;
+  background-color: #f1f3f4;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #5f6368;
+  white-space: nowrap;
+  transition: background-color 0.2s;
+}
+
+#settingsButton:hover {
+  background-color: #e8eaed;
 }
 
 #clearHistory {
@@ -280,6 +318,11 @@ h1 {
   white-space: nowrap;
 }
 
+.bookmark-meta strong {
+  color: #34a853;
+  font-weight: 600;
+}
+
 .folder-icon {
   color: #f9ab00;
   font-size: 16px;
@@ -341,11 +384,37 @@ h1 {
   box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2);
   transition: all 0.2s;
   user-select: none;
+  position: relative;
 }
 
 .domain-header:hover {
   box-shadow: 0 3px 6px rgba(102, 126, 234, 0.3);
   transform: translateY(-1px);
+}
+
+.group-hide-button {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 4px;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.2s;
+  margin-left: auto;
+}
+
+.domain-header:hover .group-hide-button {
+  opacity: 1;
+}
+
+.group-hide-button:hover {
+  background: #ea4335;
 }
 
 .domain-name {
@@ -399,4 +468,162 @@ h1 {
 .time-of-day-highlight:hover {
   background: linear-gradient(90deg, #fff4cc, #fffbf0) !important;
   box-shadow: 0 2px 8px rgba(255, 165, 0, 0.4) !important;
+}
+
+/* Settings Modal */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal.show {
+  display: flex;
+}
+
+.modal-content {
+  background: #fff;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 80%;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.modal-header h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #5f6368;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.modal-close:hover {
+  background-color: #f1f3f4;
+}
+
+.modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-body h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #5f6368;
+  margin: 0 0 12px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ignored-items-actions {
+  margin-bottom: 12px;
+}
+
+.unignore-all-button {
+  padding: 8px 16px;
+  background-color: #4285f4;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.unignore-all-button:hover {
+  background-color: #3367d6;
+}
+
+.unignore-all-button:disabled {
+  background-color: #e0e0e0;
+  color: #999;
+  cursor: not-allowed;
+}
+
+.ignored-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ignored-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #e0e0e0;
+}
+
+.ignored-item-text {
+  flex: 1;
+  font-size: 13px;
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 8px;
+}
+
+.ignored-item-type {
+  font-size: 11px;
+  color: #999;
+  margin-right: 8px;
+  padding: 2px 6px;
+  background-color: #e0e0e0;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.unignore-button {
+  padding: 6px 12px;
+  background-color: #34a853;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.2s;
+}
+
+.unignore-button:hover {
+  background-color: #2d8e47;
+}
+
+.empty-message {
+  text-align: center;
+  color: #999;
+  font-size: 13px;
+  padding: 40px 20px;
 }

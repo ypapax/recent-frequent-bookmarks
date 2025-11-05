@@ -1,8 +1,11 @@
 {
   "manifest_version": 3,
-  "name": "Recently Used Bookmarks & History",
+  "name": "Recent & Frequent Bookmarks",
+  "short_name": "Recent & Frequent",
   "version": "1.2",
-  "description": "Shows bookmarks and frequently visited pages sorted by usage",
+  "description": "Quick access to recent & frequent bookmarks sorted by usage. Smart time-of-day highlighting, powerful grouping, and instant search.",
+  "author": "Maxim Yefremov",
+  "homepage_url": "https://github.com/ypapax/recently_used_bookmark_policy",
   "permissions": [
     "bookmarks",
     "storage",
@@ -10,6 +13,16 @@
     "history"
   ],
   "action": {
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
   }
 }

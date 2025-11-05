@@ -25,39 +25,60 @@ function setupEventListeners() {
     'filterFrequent',
     'filterRecent',
     'filterTimeOfDay',
-    'groupByDomain',
-    'groupByPath'
+    'groupByTitle',
+    'groupByNone',
+    'groupByPath',
+    'groupByDomain'
   ];
 
   filterCheckboxes.forEach(id => {
     const checkbox = document.getElementById(id);
     if (checkbox) {
       checkbox.addEventListener('change', () => {
+        // Radio buttons handle mutual exclusion automatically
         saveFilterStates();
         applyFilters();
       });
     }
   });
 
-  // Reset settings button
-  const resetHiddenButton = document.getElementById('resetHidden');
-  resetHiddenButton.addEventListener('click', async () => {
-    if (confirm('Are you sure you want to reset all settings?\n\nThis will show all hidden items and reset filters to default.')) {
-      await chrome.storage.local.remove(['hiddenItems', 'filterStates', 'searchQuery']);
+  // Time window dropdown
+  const timeWindowSelect = document.getElementById('timeWindow');
+  if (timeWindowSelect) {
+    timeWindowSelect.addEventListener('change', () => {
+      saveFilterStates();
+      applyFilters();
+    });
+  }
+
+  // Settings button
+  const settingsButton = document.getElementById('settingsButton');
+  const settingsModal = document.getElementById('settingsModal');
+  const closeSettings = document.getElementById('closeSettings');
+
+  settingsButton.addEventListener('click', () => {
+    settingsModal.classList.add('show');
+    loadIgnoredItems();
+  });
+
+  closeSettings.addEventListener('click', () => {
+    settingsModal.classList.remove('show');
+  });
+
+  // Close modal when clicking outside
+  settingsModal.addEventListener('click', (e) => {
+    if (e.target === settingsModal) {
+      settingsModal.classList.remove('show');
+    }
+  });
+
+  // Unignore all button
+  const unignoreAllButton = document.getElementById('unignoreAll');
+  unignoreAllButton.addEventListener('click', async () => {
+    if (confirm('Are you sure you want to unignore all items?')) {
       hiddenItems.clear();
-
-      // Reset checkboxes to default (all checked except time of day and grouping)
-      document.getElementById('filterBookmarks').checked = true;
-      document.getElementById('filterHistory').checked = true;
-      document.getElementById('filterFrequent').checked = true;
-      document.getElementById('filterRecent').checked = true;
-      document.getElementById('filterTimeOfDay').checked = false;
-      document.getElementById('groupByDomain').checked = false;
-      document.getElementById('groupByPath').checked = false;
-
-      // Reset search input
-      document.getElementById('search').value = '';
-
+      await chrome.storage.local.set({ hiddenItems: [] });
+      loadIgnoredItems();
       applyFilters();
     }
   });
@@ -70,8 +91,11 @@ async function saveFilterStates() {
     frequent: document.getElementById('filterFrequent').checked,
     recent: document.getElementById('filterRecent').checked,
     timeOfDay: document.getElementById('filterTimeOfDay').checked,
-    groupByDomain: document.getElementById('groupByDomain').checked,
-    groupByPath: document.getElementById('groupByPath').checked
+    timeWindow: document.getElementById('timeWindow').value,
+    groupByTitle: document.getElementById('groupByTitle').checked,
+    groupByNone: document.getElementById('groupByNone').checked,
+    groupByPath: document.getElementById('groupByPath').checked,
+    groupByDomain: document.getElementById('groupByDomain').checked
   };
 
   await chrome.storage.local.set({ filterStates });
@@ -80,6 +104,53 @@ async function saveFilterStates() {
 async function saveSearchState() {
   const searchQuery = document.getElementById('search').value;
   await chrome.storage.local.set({ searchQuery });
+}
+
+function loadIgnoredItems() {
+  const ignoredItemsList = document.getElementById('ignoredItemsList');
+  const unignoreAllButton = document.getElementById('unignoreAll');
+
+  if (hiddenItems.size === 0) {
+    ignoredItemsList.innerHTML = '<div class="empty-message">No ignored items</div>';
+    unignoreAllButton.disabled = true;
+    return;
+  }
+
+  unignoreAllButton.disabled = false;
+  ignoredItemsList.innerHTML = '';
+
+  // Convert Set to array and sort
+  const sortedItems = Array.from(hiddenItems).sort();
+
+  sortedItems.forEach(item => {
+    const itemDiv = document.createElement('div');
+    itemDiv.className = 'ignored-item';
+
+    // Determine item type and display text
+    let itemText = item;
+    let itemType = 'URL';
+
+    if (item.startsWith('domain:')) {
+      itemText = item.substring(7); // Remove 'domain:' prefix
+      itemType = 'Domain';
+    }
+
+    itemDiv.innerHTML = `
+      <div class="ignored-item-text" title="${escapeHtml(itemText)}">${escapeHtml(itemText)}</div>
+      <span class="ignored-item-type">${itemType}</span>
+      <button class="unignore-button">Unignore</button>
+    `;
+
+    const unignoreButton = itemDiv.querySelector('.unignore-button');
+    unignoreButton.addEventListener('click', async () => {
+      hiddenItems.delete(item);
+      await chrome.storage.local.set({ hiddenItems: Array.from(hiddenItems) });
+      loadIgnoredItems();
+      applyFilters();
+    });
+
+    ignoredItemsList.appendChild(itemDiv);
+  });
 }
 
 async function loadData() {
@@ -95,8 +166,11 @@ async function loadData() {
       document.getElementById('filterFrequent').checked = result.filterStates.frequent ?? true;
       document.getElementById('filterRecent').checked = result.filterStates.recent ?? true;
       document.getElementById('filterTimeOfDay').checked = result.filterStates.timeOfDay ?? false;
-      document.getElementById('groupByDomain').checked = result.filterStates.groupByDomain ?? false;
+      document.getElementById('timeWindow').value = result.filterStates.timeWindow ?? '1';
+      document.getElementById('groupByTitle').checked = result.filterStates.groupByTitle ?? false;
+      document.getElementById('groupByNone').checked = result.filterStates.groupByNone ?? true;
       document.getElementById('groupByPath').checked = result.filterStates.groupByPath ?? false;
+      document.getElementById('groupByDomain').checked = result.filterStates.groupByDomain ?? false;
     }
 
     // Restore search query
@@ -278,17 +352,21 @@ function calculateScore(item, useFrequency = true, useRecency = true) {
   return score;
 }
 
-// Check if item matches current time of day (±1 hour window)
+// Check if item matches current time of day (±N hour window based on selection)
 function matchesCurrentTimeOfDay(item) {
   if (!item.visits || item.visits.length === 0) {
     return false;
   }
 
+  // Get selected time window in hours
+  const timeWindowHours = parseInt(document.getElementById('timeWindow')?.value || '1');
+  const timeWindowMinutes = timeWindowHours * 60;
+
   const currentHour = new Date().getHours();
   const currentMinute = new Date().getMinutes();
   const currentTimeInMinutes = currentHour * 60 + currentMinute;
 
-  // Count visits within ±1 hour of current time
+  // Count visits within ±N hours of current time
   let matchingVisits = 0;
   item.visits.forEach(visit => {
     const visitDate = new Date(visit.visitTime);
@@ -296,18 +374,64 @@ function matchesCurrentTimeOfDay(item) {
     const visitMinute = visitDate.getMinutes();
     const visitTimeInMinutes = visitHour * 60 + visitMinute;
 
-    // Check if within ±60 minutes (with wrap-around for midnight)
+    // Check if within ±N hours (with wrap-around for midnight)
     const diff = Math.abs(currentTimeInMinutes - visitTimeInMinutes);
     const wrapDiff = 1440 - diff; // 1440 = 24 hours in minutes
     const minDiff = Math.min(diff, wrapDiff);
 
-    if (minDiff <= 60) {
+    if (minDiff <= timeWindowMinutes) {
       matchingVisits++;
     }
   });
 
   // Consider it a match if at least 1 visit or 20% of visits were around this time
   return matchingVisits >= 1 || (matchingVisits / item.visits.length) >= 0.2;
+}
+
+// Get the minimum time difference in minutes for an item's visits from current time
+function getMinTimeDifference(item) {
+  if (!item.visits || item.visits.length === 0) {
+    return Infinity;
+  }
+
+  const currentHour = new Date().getHours();
+  const currentMinute = new Date().getMinutes();
+  const currentTimeInMinutes = currentHour * 60 + currentMinute;
+
+  let minDiff = Infinity;
+  item.visits.forEach(visit => {
+    const visitDate = new Date(visit.visitTime);
+    const visitHour = visitDate.getHours();
+    const visitMinute = visitDate.getMinutes();
+    const visitTimeInMinutes = visitHour * 60 + visitMinute;
+
+    // Check with wrap-around for midnight
+    const diff = Math.abs(currentTimeInMinutes - visitTimeInMinutes);
+    const wrapDiff = 1440 - diff; // 1440 = 24 hours in minutes
+    const timeDiff = Math.min(diff, wrapDiff);
+
+    if (timeDiff < minDiff) {
+      minDiff = timeDiff;
+    }
+  });
+
+  return minDiff;
+}
+
+// Format time difference for display
+function formatTimeDifference(minutes) {
+  if (minutes === 0) {
+    return 'now';
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const mins = Math.round(minutes % 60);
+
+  if (hours > 0) {
+    // Don't show minutes when we have hours
+    return `~${hours}h`;
+  }
+  return `~${mins}m`;
 }
 
 function sortAndDisplayItems(items, useFrequency = true, useRecency = true) {
@@ -352,9 +476,10 @@ function displayItems(items) {
   // Check if grouping is enabled
   const groupByDomain = document.getElementById('groupByDomain')?.checked || false;
   const groupByPath = document.getElementById('groupByPath')?.checked || false;
+  const groupByTitle = document.getElementById('groupByTitle')?.checked || false;
 
-  if (groupByDomain || groupByPath) {
-    // Group items by domain or path
+  if (groupByDomain || groupByPath || groupByTitle) {
+    // Group items by domain, path, or title
     const groups = new Map();
 
     items.forEach(item => {
@@ -364,8 +489,16 @@ function displayItems(items) {
           groups.set('_folders', []);
         }
         groups.get('_folders').push(item);
-      } else if (item.url) {
-        const groupKey = groupByPath ? getPathWithoutQuery(item.url) : getDomain(item.url);
+      } else if (item.url || item.title) {
+        let groupKey;
+        if (groupByTitle) {
+          groupKey = item.title || 'Untitled';
+        } else if (groupByPath) {
+          groupKey = getPathWithoutQuery(item.url);
+        } else {
+          groupKey = getDomain(item.url);
+        }
+
         if (!groups.has(groupKey)) {
           groups.set(groupKey, []);
         }
@@ -381,19 +514,59 @@ function displayItems(items) {
           container.appendChild(element);
         });
       } else {
-        // Only show the top item (first item = highest score)
+        // If time-of-day highlighting is enabled, prioritize items with smallest time difference
+        const showTimeOfDay = document.getElementById('filterTimeOfDay')?.checked || false;
+        if (showTimeOfDay) {
+          // Sort by minimum time difference (smallest first)
+          groupItems.sort((a, b) => {
+            const aMinDiff = getMinTimeDifference(a);
+            const bMinDiff = getMinTimeDifference(b);
+            return aMinDiff - bMinDiff;
+          });
+        }
+
+        // Only show the top item (first item = highest score or time match)
         const topItem = groupItems[0];
         const otherCount = groupItems.length - 1;
 
         // Create header with expand/collapse functionality
         const header = document.createElement('div');
         header.className = 'domain-header';
-        const icon = groupByPath ? '🔗' : '🌐';
+        let icon = '🌐';
+        if (groupByTitle) {
+          icon = '📝';
+        } else if (groupByPath) {
+          icon = '🔗';
+        }
         header.innerHTML = `
           <span class="domain-name">${icon} ${escapeHtml(groupKey)}</span>
           <span class="domain-count">${otherCount > 0 ? `+${otherCount} more` : ''}</span>
           <span class="expand-icon">${otherCount > 0 ? '▼' : ''}</span>
+          <button class="group-hide-button" title="Hide this group">✕</button>
         `;
+
+        // Add hide button functionality for the group
+        const groupHideButton = header.querySelector('.group-hide-button');
+        groupHideButton.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const message = `Are you sure you want to hide all items in this group?\n\nYou can restore them later by clicking "Settings".`;
+          if (confirm(message)) {
+            // Hide all items in this group
+            groupItems.forEach(item => {
+              if (item.url) {
+                hiddenItems.add(item.url);
+              } else if (item.id) {
+                hiddenItems.add(item.id);
+              }
+            });
+            // Save to storage
+            await chrome.storage.local.set({
+              hiddenItems: Array.from(hiddenItems)
+            });
+            // Re-apply filters to remove the items from view
+            applyFilters();
+          }
+        });
 
         // Create collapsible container for all items
         const groupContainer = document.createElement('div');
@@ -465,8 +638,23 @@ function createItemElement(item) {
   if (visitCount > 0 && lastVisit) {
     const timeAgo = getTimeAgo(lastVisit);
     const visitTime = formatVisitTime(lastVisit);
-    // Make time bold if it matches current time-of-day
-    const timeDisplay = isTimeMatch ? `<strong>${visitTime}</strong>` : visitTime;
+
+    // Calculate time difference and add it if time-of-day is enabled
+    let timeDisplay = visitTime;
+    if (showTimeOfDay) {
+      const minDiff = getMinTimeDifference(item);
+      if (minDiff !== Infinity) {
+        const diffText = formatTimeDifference(minDiff);
+        if (isTimeMatch) {
+          timeDisplay = `<strong>${visitTime} (${diffText})</strong>`;
+        } else {
+          timeDisplay = `${visitTime} (${diffText})`;
+        }
+      }
+    } else if (isTimeMatch) {
+      timeDisplay = `<strong>${visitTime}</strong>`;
+    }
+
     metaText = `${visitCount} visit${visitCount > 1 ? 's' : ''} • ${timeAgo} • ${timeDisplay}`;
   } else if (item.dateAdded) {
     const timeAgo = getTimeAgo(item.dateAdded);
@@ -563,8 +751,8 @@ function createItemElement(item) {
 async function hideItem(itemId, type = 'url') {
   // Ask for confirmation
   const message = type === 'domain'
-    ? `Are you sure you want to hide all items from this domain?\n\nYou can restore them later by clicking "Reset Settings".`
-    : `Are you sure you want to hide this item?\n\nYou can restore it later by clicking "Reset Settings".`;
+    ? `Are you sure you want to hide all items from this domain?\n\nYou can restore them later by clicking "Settings".`
+    : `Are you sure you want to hide this item?\n\nYou can restore it later by clicking "Settings".`;
 
   if (!confirm(message)) {
     return;

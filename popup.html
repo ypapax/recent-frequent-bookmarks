@@ -9,58 +9,121 @@
 <body>
   <div class="container">
     <div class="header">
-      <h1>Recently Used</h1>
+      <h1>Recent & Frequent</h1>
       <div class="controls">
         <input type="text" id="search" placeholder="Search...">
-        <button id="resetHidden" title="Reset all settings (show hidden items)">Reset Settings</button>
+        <button id="settingsButton" title="Open settings">Settings</button>
       </div>
       <div class="filters">
-        <div class="filter-group">
-          <div class="filter-group-label">🔍 Filter:</div>
-          <label class="filter-checkbox">
-            <input type="checkbox" id="filterBookmarks" checked>
-            <span>⭐ Bookmarks</span>
-          </label>
-          <label class="filter-checkbox">
-            <input type="checkbox" id="filterHistory" checked>
-            <span>🕐 History</span>
-          </label>
-        </div>
-        <div class="filter-group">
-          <div class="filter-group-label">📊 Sort:</div>
-          <label class="filter-checkbox">
-            <input type="checkbox" id="filterFrequent" checked>
-            <span>🔥 Frequent</span>
-          </label>
-          <label class="filter-checkbox">
-            <input type="checkbox" id="filterRecent" checked>
-            <span>⏱️ Recent</span>
-          </label>
-        </div>
-        <div class="filter-group">
-          <div class="filter-group-label">📦 Group:</div>
-          <label class="filter-checkbox">
-            <input type="checkbox" id="groupByDomain">
-            <span>🌐 By Domain</span>
-          </label>
-          <label class="filter-checkbox">
-            <input type="checkbox" id="groupByPath">
-            <span>🔗 By Path</span>
-          </label>
-        </div>
-        <div class="filter-group">
-          <div class="filter-group-label">✨ Highlight:</div>
-          <label class="filter-checkbox">
-            <input type="checkbox" id="filterTimeOfDay">
-            <span>🕒 Time of Day (±1h)</span>
-          </label>
-        </div>
+        <table class="filters-table">
+          <tr>
+            <td class="filter-group-label">🔍 Filter:</td>
+            <td>
+              <label class="filter-checkbox">
+                <input type="checkbox" id="filterBookmarks" checked>
+                <span>⭐ Bookmarks</span>
+              </label>
+            </td>
+            <td>
+              <label class="filter-checkbox">
+                <input type="checkbox" id="filterHistory" checked>
+                <span>🕐 History</span>
+              </label>
+            </td>
+          </tr>
+          <tr>
+            <td class="filter-group-label">📊 Sort:</td>
+            <td>
+              <label class="filter-checkbox">
+                <input type="checkbox" id="filterFrequent" checked>
+                <span>🔥 Frequent</span>
+              </label>
+            </td>
+            <td>
+              <label class="filter-checkbox">
+                <input type="checkbox" id="filterRecent" checked>
+                <span>⏱️ Recent</span>
+              </label>
+            </td>
+          </tr>
+          <tr>
+            <td class="filter-group-label">📦 Group:</td>
+            <td>
+              <label class="filter-checkbox">
+                <input type="radio" name="groupBy" id="groupByTitle">
+                <span>📝 By Title</span>
+              </label>
+            </td>
+            <td>
+              <label class="filter-checkbox">
+                <input type="radio" name="groupBy" id="groupByNone" checked>
+                <span>⊘ None</span>
+              </label>
+            </td>
+            <td>
+              <label class="filter-checkbox">
+                <input type="radio" name="groupBy" id="groupByPath">
+                <span>🔗 By Path</span>
+              </label>
+            </td>
+            <td>
+              <label class="filter-checkbox">
+                <input type="radio" name="groupBy" id="groupByDomain">
+                <span>🌐 By Domain</span>
+              </label>
+            </td>
+          </tr>
+          <tr>
+            <td class="filter-group-label">✨ Highlight:</td>
+            <td>
+              <label class="filter-checkbox">
+                <input type="checkbox" id="filterTimeOfDay">
+                <span>🕒 Time of Day</span>
+              </label>
+            </td>
+            <td>
+              <select id="timeWindow" class="time-window-select">
+                <option value="1">±1h</option>
+                <option value="2">±2h</option>
+                <option value="3">±3h</option>
+                <option value="4">±4h</option>
+                <option value="5">±5h</option>
+                <option value="6">±6h</option>
+                <option value="7">±7h</option>
+                <option value="8">±8h</option>
+                <option value="9">±9h</option>
+                <option value="10">±10h</option>
+                <option value="11">±11h</option>
+              </select>
+            </td>
+          </tr>
+        </table>
       </div>
     </div>
     <div id="bookmarksList" class="bookmarks-list">
       <div class="loading">Loading...</div>
     </div>
   </div>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Settings</h2>
+        <button class="modal-close" id="closeSettings">✕</button>
+      </div>
+      <div class="modal-body">
+        <h3>Ignored Items</h3>
+        <div class="ignored-items-actions">
+          <button id="unignoreAll" class="unignore-all-button">Unignore All</button>
+        </div>
+        <div id="ignoredItemsList" class="ignored-items-list">
+          <div class="empty-message">No ignored items</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="popup.js"></script>
 </body>
 </html>

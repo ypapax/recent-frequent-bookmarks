@@ -1,124 +1,137 @@
-# Recently Used Bookmarks & History - Chrome Extension
+# Recent & Frequent Bookmarks - Chrome Extension
 
-A Chrome extension that shows your **bookmarks AND browsing history** combined and sorted by a smart scoring algorithm, making it easy to quickly access your most frequently and recently visited pages.
+Quick access to your **most recent and frequently used bookmarks** with smart sorting, time-of-day highlighting, and powerful search. A productivity-focused bookmark manager for Chrome.
 
-## Features
+[![Chrome Web Store](https://img.shields.io/badge/Chrome-Web%20Store-blue)](https://chrome.google.com/webstore)
+[![Privacy Policy](https://img.shields.io/badge/Privacy-First-green)](https://ypapax.github.io/recently_used_bookmark_policy/PRIVACY_POLICY)
 
-- **Unified View**: Displays both bookmarks and browsing history in one place
-- **Smart Scoring Algorithm**: Items are ranked by browser history data:
-  - **Visit Frequency** (0-100 points): More visits = higher score
-  - **Recency** (0-100 points): Recently visited items score higher
-  - Bookmarks and history items are sorted equally based on actual usage
+## Why Recent & Frequent?
 
-- **Advanced Filtering**: Filter items by:
-  - ⭐ **Bookmarks**: Show only bookmarked items
-  - 🕐 **History**: Show only browsing history items
-  - 🔥 **Frequent**: Show items with 10+ visits
-  - ⏱️ **Recent**: Show items visited in the last 7 days
+Stop scrolling through endless bookmark folders. This extension shows you the bookmarks and pages you **actually use**, sorted by frequency and recency. Perfect for power users who want instant access to their workflow.
 
-- **Search Functionality**: Quickly find items by title, URL, or folder path
+## Key Features
 
-- **Visual Indicators**:
-  - Bookmarks have a ⭐ badge and yellow left border
-  - History items have a 🕐 badge and gray background
-  - Folders have a 📁 icon
-  - Visit counts and time ago are displayed
+### 🚀 Smart Usage-Based Sorting
+- **Visit Frequency Scoring** (0-100 points): More visits = higher ranking
+- **Recency Scoring** (0-100 points): Recently accessed pages appear first
+- Combined scoring algorithm ranks items by actual usage, not creation date
 
-- **Hide Items**:
-  - Hover over any item to reveal a hide button (✕)
-  - Click to hide unwanted items from the list
-  - Hidden items won't appear until you reset settings
+### 🕒 Time-of-Day Highlighting
+- Automatically highlights bookmarks you typically visit at the current time
+- Adjustable time window: ±1h to ±11h
+- Shows time difference for quick context
+- Perfect for daily routines and scheduled tasks
 
-- **Management**:
-  - **Reset Settings**: Restore all hidden items back to the list
+### 📦 Flexible Grouping Options
+- **Group by Domain**: See all items from the same website together
+- **Group by Path**: Organize by URL path structure
+- **Group by Title**: Cluster similarly named bookmarks
+- Collapsible groups with expandable "show more" functionality
+
+### 🔍 Powerful Filtering & Search
+- Filter by: Bookmarks, History, Frequent (10+ visits), Recent (last 7 days)
+- Instant search across titles, URLs, and folder paths
+- Search state persists between sessions
+
+### 🎯 Smart Management
+- Hide individual URLs or entire domains
+- Settings panel to manage ignored items
+- One-click "Unignore All" functionality
+- No permanent deletion - everything is recoverable
+
+### 🔒 Privacy First
+- **100% local processing** - no data leaves your device
+- No external servers, no tracking, no analytics
+- Open source code you can audit
+- Only accesses data you already have in Chrome
+
+## Perfect For
+
+- **Developers**: Quick access to documentation, repos, and tools
+- **Researchers**: Manage frequently visited research sites
+- **Power Users**: Anyone with 50+ bookmarks who wants faster access
+- **Daily Routines**: Access time-specific bookmarks automatically
+- **Productivity**: Reduce time searching for frequently used sites
 
 ## Installation
 
-Since this is an unpacked extension, follow these steps to install:
+### From Chrome Web Store (Recommended)
+[Coming soon - publishing in progress]
 
-1. **Clone or Download** this repository to your local machine
-
-2. **Open Chrome Extensions Page**:
-   - Open Chrome and navigate to `chrome://extensions/`
-   - Or click the three dots menu → More Tools → Extensions
-
-3. **Enable Developer Mode**:
-   - Toggle the "Developer mode" switch in the top-right corner
-
-4. **Load the Extension**:
-   - Click "Load unpacked" button
-   - Navigate to the folder containing the extension files
-   - Select the folder and click "Select"
-
-5. **Grant Permissions**:
-   - The extension will request permissions for:
-     - `bookmarks`: To read your bookmarks
-     - `history`: To check browser history for visited pages
-     - `storage`: To store hidden items
-     - `tabs`: To open pages in new tabs
-
-6. **Pin the Extension** (Optional):
-   - Click the puzzle piece icon in Chrome toolbar
-   - Find "Recently Used Bookmarks"
-   - Click the pin icon to keep it visible
-
-## Usage
-
-1. **Click the extension icon** in your Chrome toolbar to open the popup
-
-2. **Browse items** sorted by smart scoring:
-   - Items are ranked by visit frequency + recency
-   - Bookmarked items get a bonus boost
-   - Use filter checkboxes to show/hide bookmarks, history, frequent, or recent items
-
-3. **Search** using the search box at the top
-
-4. **Click an item** to open it in a new tab
-
-5. **Hide items** by hovering and clicking the ✕ button
-
-6. **Reset settings** to restore all hidden items
+### Developer Installation
+1. Download or clone this extension from your local folder
+2. Open Chrome and navigate to `chrome://extensions/`
+3. Enable "Developer mode" (toggle in top-right)
+4. Click "Load unpacked"
+5. Select the extension folder
 
 ## How It Works
 
-The extension uses browser history data to rank items:
+1. **Reads Your Browser History**: Accesses visit counts and timestamps (locally)
+2. **Calculates Smart Scores**: Combines frequency and recency into a single ranking
+3. **Displays Sorted Results**: Shows your most-used bookmarks and sites first
+4. **Learns Your Patterns**: Time-of-day feature adapts to your browsing habits
 
-1. **Browser History**: Reads visit counts and last visit times from Chrome's history
-2. **Smart Scoring**: Combines frequency + recency
-3. **Fair Sorting**: Bookmarks and history items are sorted equally by actual usage
+All processing happens **locally in your browser** - no data is sent anywhere.
 
-All data comes from your existing browser history - no additional tracking needed!
+## Permissions Explained
 
-## Privacy
+- `bookmarks`: Read your bookmarks to display them
+- `history`: Check visit counts and times for ranking
+- `storage`: Save your preferences and hidden items locally
+- `tabs`: Open bookmarks in new tabs when clicked
 
-No tracking! The extension only reads existing browser data locally:
-- Your bookmarks
-- Your browser history
-- Hidden items (stored locally)
+## Screenshots
 
-No data is sent to external servers.
+[Screenshots will be added here]
 
-## Files Structure
+## Privacy & Security
 
-```
-recently_used_bookmark/
-├── manifest.json       # Extension configuration
-├── popup.html         # Extension popup interface
-├── popup.css          # Popup styling
-├── popup.js           # Popup logic and display
-└── README.md          # This file
-```
+Read our [Privacy Policy](https://ypapax.github.io/recently_used_bookmark_policy/PRIVACY_POLICY)
 
-## Notes
+**What we DON'T do:**
+- ❌ No data collection
+- ❌ No external servers
+- ❌ No tracking or analytics
+- ❌ No ads
+- ❌ No third-party sharing
 
-- The extension uses your existing browser history - no additional tracking
-- Hidden items are stored in local Chrome storage
-- Folders are always sorted to the bottom of the list
+## Keywords
 
-## Browser Compatibility
+bookmark manager, chrome extension, recent bookmarks, frequent sites, quick access bookmarks, productivity tool, browser history, smart bookmarks, bookmark organizer, time-based bookmarks, usage-based sorting, bookmark search, browser productivity, chrome productivity, bookmark filters
 
-This extension is designed for Google Chrome and Chromium-based browsers that support Manifest V3.
+## Technical Details
+
+- **Manifest Version**: V3 (latest Chrome standard)
+- **Framework**: Vanilla JavaScript
+- **Browser Support**: Chrome, Edge, Brave (Chromium-based)
+- **Performance**: Lightweight, no background processes
+- **Storage**: Chrome local storage API
+
+## Contributing
+
+Found a bug or have a feature request? [Open an issue](https://github.com/ypapax/recently_used_bookmark_policy/issues)
+
+## Author
+
+Created by **Maxim Yefremov**
+
+- GitHub: [@ypapax](https://github.com/ypapax)
+- Privacy Policy Issues: [Create Issue](https://github.com/ypapax/recently_used_bookmark_policy/issues)
 
 ## License
 
 Free to use and modify for personal use.
+
+## Version History
+
+- **v1.2** - Current version with time-of-day highlighting, grouping, and settings panel
+- **v1.0** - Initial release with basic sorting and filtering
+
+---
+
+⭐ **Like this extension?** Please star the repo and leave a review on the Chrome Web Store!
+
+🐛 **Found a bug?** [Report it here](https://github.com/ypapax/recently_used_bookmark_policy/issues)
+
+📧 **Questions?** Check our [Privacy Policy](https://ypapax.github.io/recently_used_bookmark_policy/PRIVACY_POLICY) or create an issue
