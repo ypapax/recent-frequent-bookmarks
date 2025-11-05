@@ -14,6 +14,7 @@ function setupEventListeners() {
   // Search functionality
   const searchInput = document.getElementById('search');
   searchInput.addEventListener('input', (e) => {
+    saveSearchState();
     applyFilters();
   });
 
@@ -41,7 +42,7 @@ function setupEventListeners() {
   const resetHiddenButton = document.getElementById('resetHidden');
   resetHiddenButton.addEventListener('click', async () => {
     if (confirm('Are you sure you want to reset all settings?\n\nThis will show all hidden items and reset filters to default.')) {
-      await chrome.storage.local.remove(['hiddenItems', 'filterStates']);
+      await chrome.storage.local.remove(['hiddenItems', 'filterStates', 'searchQuery']);
       hiddenItems.clear();
 
       // Reset checkboxes to default (all checked except time of day and grouping)
@@ -51,6 +52,9 @@ function setupEventListeners() {
       document.getElementById('filterRecent').checked = true;
       document.getElementById('filterTimeOfDay').checked = false;
       document.getElementById('groupByDomain').checked = false;
+
+      // Reset search input
+      document.getElementById('search').value = '';
 
       applyFilters();
     }
@@ -70,10 +74,15 @@ async function saveFilterStates() {
   await chrome.storage.local.set({ filterStates });
 }
 
+async function saveSearchState() {
+  const searchQuery = document.getElementById('search').value;
+  await chrome.storage.local.set({ searchQuery });
+}
+
 async function loadData() {
   try {
-    // Load hidden items and filter states
-    const result = await chrome.storage.local.get(['hiddenItems', 'filterStates']);
+    // Load hidden items, filter states, and search query
+    const result = await chrome.storage.local.get(['hiddenItems', 'filterStates', 'searchQuery']);
     hiddenItems = new Set(result.hiddenItems || []);
 
     // Restore filter checkbox states
@@ -84,6 +93,11 @@ async function loadData() {
       document.getElementById('filterRecent').checked = result.filterStates.recent ?? true;
       document.getElementById('filterTimeOfDay').checked = result.filterStates.timeOfDay ?? false;
       document.getElementById('groupByDomain').checked = result.filterStates.groupByDomain ?? false;
+    }
+
+    // Restore search query
+    if (result.searchQuery) {
+      document.getElementById('search').value = result.searchQuery;
     }
 
     // Get all bookmarks
