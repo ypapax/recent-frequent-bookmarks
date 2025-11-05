@@ -25,7 +25,8 @@ function setupEventListeners() {
     'filterFrequent',
     'filterRecent',
     'filterTimeOfDay',
-    'groupByDomain'
+    'groupByDomain',
+    'groupByPath'
   ];
 
   filterCheckboxes.forEach(id => {
@@ -52,6 +53,7 @@ function setupEventListeners() {
       document.getElementById('filterRecent').checked = true;
       document.getElementById('filterTimeOfDay').checked = false;
       document.getElementById('groupByDomain').checked = false;
+      document.getElementById('groupByPath').checked = false;
 
       // Reset search input
       document.getElementById('search').value = '';
@@ -68,7 +70,8 @@ async function saveFilterStates() {
     frequent: document.getElementById('filterFrequent').checked,
     recent: document.getElementById('filterRecent').checked,
     timeOfDay: document.getElementById('filterTimeOfDay').checked,
-    groupByDomain: document.getElementById('groupByDomain').checked
+    groupByDomain: document.getElementById('groupByDomain').checked,
+    groupByPath: document.getElementById('groupByPath').checked
   };
 
   await chrome.storage.local.set({ filterStates });
@@ -93,6 +96,7 @@ async function loadData() {
       document.getElementById('filterRecent').checked = result.filterStates.recent ?? true;
       document.getElementById('filterTimeOfDay').checked = result.filterStates.timeOfDay ?? false;
       document.getElementById('groupByDomain').checked = result.filterStates.groupByDomain ?? false;
+      document.getElementById('groupByPath').checked = result.filterStates.groupByPath ?? false;
     }
 
     // Restore search query
@@ -345,32 +349,33 @@ function displayItems(items) {
 
   container.innerHTML = '';
 
-  // Check if domain grouping is enabled
+  // Check if grouping is enabled
   const groupByDomain = document.getElementById('groupByDomain')?.checked || false;
+  const groupByPath = document.getElementById('groupByPath')?.checked || false;
 
-  if (groupByDomain) {
-    // Group items by domain
-    const domainGroups = new Map();
+  if (groupByDomain || groupByPath) {
+    // Group items by domain or path
+    const groups = new Map();
 
     items.forEach(item => {
       if (item.isFolder) {
         // Folders go to a special group
-        if (!domainGroups.has('_folders')) {
-          domainGroups.set('_folders', []);
+        if (!groups.has('_folders')) {
+          groups.set('_folders', []);
         }
-        domainGroups.get('_folders').push(item);
+        groups.get('_folders').push(item);
       } else if (item.url) {
-        const domain = getDomain(item.url);
-        if (!domainGroups.has(domain)) {
-          domainGroups.set(domain, []);
+        const groupKey = groupByPath ? getPathWithoutQuery(item.url) : getDomain(item.url);
+        if (!groups.has(groupKey)) {
+          groups.set(groupKey, []);
         }
-        domainGroups.get(domain).push(item);
+        groups.get(groupKey).push(item);
       }
     });
 
     // Display groups
-    domainGroups.forEach((groupItems, domain) => {
-      if (domain === '_folders') {
+    groups.forEach((groupItems, groupKey) => {
+      if (groupKey === '_folders') {
         groupItems.forEach(item => {
           const element = createItemElement(item);
           container.appendChild(element);
@@ -380,11 +385,12 @@ function displayItems(items) {
         const topItem = groupItems[0];
         const otherCount = groupItems.length - 1;
 
-        // Create domain header with expand/collapse functionality
+        // Create header with expand/collapse functionality
         const header = document.createElement('div');
         header.className = 'domain-header';
+        const icon = groupByPath ? '🔗' : '🌐';
         header.innerHTML = `
-          <span class="domain-name">🌐 ${escapeHtml(domain)}</span>
+          <span class="domain-name">${icon} ${escapeHtml(groupKey)}</span>
           <span class="domain-count">${otherCount > 0 ? `+${otherCount} more` : ''}</span>
           <span class="expand-icon">${otherCount > 0 ? '▼' : ''}</span>
         `;
@@ -581,6 +587,16 @@ function getDomain(url) {
   try {
     const urlObj = new URL(url);
     return urlObj.hostname;
+  } catch {
+    return url;
+  }
+}
+
+function getPathWithoutQuery(url) {
+  try {
+    const urlObj = new URL(url);
+    // Return domain + pathname (without query string or hash)
+    return urlObj.hostname + urlObj.pathname;
   } catch {
     return url;
   }
