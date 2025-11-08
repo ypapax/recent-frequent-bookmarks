@@ -9,7 +9,6 @@
   "permissions": [
     "bookmarks",
     "storage",
-    "tabs",
     "history"
   ],
   "action": {
