@@ -32,7 +32,7 @@
             </td>
           </tr>
           <tr>
-            <td class="filter-group-label">📊 Sort:</td>
+            <td class="filter-group-label">📊 Sort priority:</td>
             <td>
               <label class="filter-checkbox">
                 <input type="radio" name="sortBy" id="filterFrequent" checked>
@@ -44,6 +44,30 @@
                 <input type="radio" name="sortBy" id="filterRecent">
                 <span>⏱️ Recent</span>
               </label>
+            </td>
+          </tr>
+          <tr>
+            <td class="filter-group-label">✨ Highlight:</td>
+            <td>
+              <label class="filter-checkbox">
+                <input type="checkbox" id="filterTimeOfDay">
+                <span>🕒 Time of Day</span>
+              </label>
+            </td>
+            <td>
+              <select id="timeWindow" class="time-window-select">
+                <option value="1">±1h</option>
+                <option value="2">±2h</option>
+                <option value="3">±3h</option>
+                <option value="4">±4h</option>
+                <option value="5">±5h</option>
+                <option value="6">±6h</option>
+                <option value="7">±7h</option>
+                <option value="8">±8h</option>
+                <option value="9">±9h</option>
+                <option value="10">±10h</option>
+                <option value="11">±11h</option>
+              </select>
             </td>
           </tr>
           <tr>
@@ -71,30 +95,6 @@
                 <input type="radio" name="groupBy" id="groupByDomain">
                 <span>🌐 By Domain</span>
               </label>
-            </td>
-          </tr>
-          <tr>
-            <td class="filter-group-label">✨ Highlight:</td>
-            <td>
-              <label class="filter-checkbox">
-                <input type="checkbox" id="filterTimeOfDay">
-                <span>🕒 Time of Day</span>
-              </label>
-            </td>
-            <td>
-              <select id="timeWindow" class="time-window-select">
-                <option value="1">±1h</option>
-                <option value="2">±2h</option>
-                <option value="3">±3h</option>
-                <option value="4">±4h</option>
-                <option value="5">±5h</option>
-                <option value="6">±6h</option>
-                <option value="7">±7h</option>
-                <option value="8">±8h</option>
-                <option value="9">±9h</option>
-                <option value="10">±10h</option>
-                <option value="11">±11h</option>
-              </select>
             </td>
           </tr>
         </table>
