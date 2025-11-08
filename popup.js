@@ -94,8 +94,8 @@ async function saveFilterStates() {
   const filterStates = {
     bookmarks: document.getElementById('filterBookmarks').checked,
     history: document.getElementById('filterHistory').checked,
-    frequent: document.getElementById('filterFrequent').checked,
-    recent: document.getElementById('filterRecent').checked,
+    sortByFrequent: document.getElementById('filterFrequent').checked,
+    sortByRecent: document.getElementById('filterRecent').checked,
     timeOfDay: document.getElementById('filterTimeOfDay').checked,
     timeWindow: document.getElementById('timeWindow').value,
     groupByTitle: document.getElementById('groupByTitle').checked,
@@ -182,8 +182,8 @@ async function loadData() {
     if (result.filterStates) {
       document.getElementById('filterBookmarks').checked = result.filterStates.bookmarks ?? true;
       document.getElementById('filterHistory').checked = result.filterStates.history ?? true;
-      document.getElementById('filterFrequent').checked = result.filterStates.frequent ?? true;
-      document.getElementById('filterRecent').checked = result.filterStates.recent ?? true;
+      document.getElementById('filterFrequent').checked = result.filterStates.sortByFrequent ?? true;
+      document.getElementById('filterRecent').checked = result.filterStates.sortByRecent ?? false;
       document.getElementById('filterTimeOfDay').checked = result.filterStates.timeOfDay ?? false;
       document.getElementById('timeWindow').value = result.filterStates.timeWindow ?? '1';
       document.getElementById('groupByTitle').checked = result.filterStates.groupByTitle ?? false;
@@ -336,39 +336,31 @@ function flattenBookmarks(node, result, path = []) {
   }
 }
 
-function calculateScore(item, useFrequency = true, useRecency = true) {
-  let score = 0;
+function calculateScores(item) {
   const now = Date.now();
   const ONE_DAY = 24 * 60 * 60 * 1000;
 
-  // Folders get minimal score (sort to bottom)
+  // Folders get minimal scores (sort to bottom)
   if (item.isFolder) {
-    return 0;
+    return { frequencyScore: 0, recencyScore: 0 };
   }
 
-  // Component 1: Visit frequency (0-100 points) - only if enabled
-  let frequencyScore = 0;
-  if (useFrequency) {
-    const visitCount = item.visitCount || 0;
-    frequencyScore = Math.min(100, visitCount * 2); // 2 points per visit, max 100
-  }
+  // Visit frequency score (0-100 points)
+  const visitCount = item.visitCount || 0;
+  const frequencyScore = Math.min(100, visitCount * 2); // 2 points per visit, max 100
 
-  // Component 2: Recency score (0-100 points) - only if enabled
+  // Recency score (0-100 points)
+  const lastVisit = item.lastVisitTime || item.dateAdded || 0;
+  const daysSinceVisit = (now - lastVisit) / ONE_DAY;
   let recencyScore = 0;
-  if (useRecency) {
-    const lastVisit = item.lastVisitTime || item.dateAdded || 0;
-    const daysSinceVisit = (now - lastVisit) / ONE_DAY;
-    if (daysSinceVisit < 1) recencyScore = 100;
-    else if (daysSinceVisit < 7) recencyScore = 80;
-    else if (daysSinceVisit < 30) recencyScore = 60;
-    else if (daysSinceVisit < 90) recencyScore = 40;
-    else if (daysSinceVisit < 180) recencyScore = 20;
-    else recencyScore = 10;
-  }
+  if (daysSinceVisit < 1) recencyScore = 100;
+  else if (daysSinceVisit < 7) recencyScore = 80;
+  else if (daysSinceVisit < 30) recencyScore = 60;
+  else if (daysSinceVisit < 90) recencyScore = 40;
+  else if (daysSinceVisit < 180) recencyScore = 20;
+  else recencyScore = 10;
 
-  score = frequencyScore + recencyScore;
-
-  return score;
+  return { frequencyScore, recencyScore };
 }
 
 // Check if item matches current time of day (±N hour window based on selection)
@@ -453,21 +445,34 @@ function formatTimeDifference(minutes) {
   return `~${mins}m`;
 }
 
-function sortAndDisplayItems(items, useFrequency = true, useRecency = true) {
-  // Calculate scores for all items based on active filters (no time-of-day in scoring)
+function sortAndDisplayItems(items, primarySortByFrequent = true) {
+  // Calculate scores for all items
   items.forEach(item => {
-    item.score = calculateScore(item, useFrequency, useRecency);
+    const scores = calculateScores(item);
+    item.frequencyScore = scores.frequencyScore;
+    item.recencyScore = scores.recencyScore;
   });
 
-  // Sort by score (highest first)
+  // Sort with primary and secondary criteria
   const sorted = items.sort((a, b) => {
     // Folders go to bottom
     if (a.isFolder && !b.isFolder) return 1;
     if (b.isFolder && !a.isFolder) return -1;
 
-    // Otherwise sort by score
-    if (b.score !== a.score) {
-      return b.score - a.score;
+    // Primary sort criterion
+    const aPrimary = primarySortByFrequent ? a.frequencyScore : a.recencyScore;
+    const bPrimary = primarySortByFrequent ? b.frequencyScore : b.recencyScore;
+
+    if (bPrimary !== aPrimary) {
+      return bPrimary - aPrimary;
+    }
+
+    // Secondary sort criterion (the opposite of primary)
+    const aSecondary = primarySortByFrequent ? a.recencyScore : a.frequencyScore;
+    const bSecondary = primarySortByFrequent ? b.recencyScore : b.frequencyScore;
+
+    if (bSecondary !== aSecondary) {
+      return bSecondary - aSecondary;
     }
 
     // Tie breaker: alphabetically
@@ -827,11 +832,7 @@ function applyFilters() {
   const searchQuery = document.getElementById('search').value.trim().toLowerCase();
   const showBookmarks = document.getElementById('filterBookmarks').checked;
   const showHistory = document.getElementById('filterHistory').checked;
-  const showFrequent = document.getElementById('filterFrequent').checked;
-  const showRecent = document.getElementById('filterRecent').checked;
-
-  const ONE_DAY = 24 * 60 * 60 * 1000;
-  const FREQUENT_THRESHOLD = 10; // 10+ visits = frequent
+  const sortByFrequent = document.getElementById('filterFrequent').checked;
 
   let filtered = allItems.filter(item => {
     // Filter out hidden items (URL, folder, or domain)
@@ -848,27 +849,6 @@ function applyFilters() {
     if (item.isBookmark && !item.isFolder && !showBookmarks) return false;
     if (item.type === 'history' && !showHistory) return false;
 
-    // Apply frequency/recency filters
-    const visitCount = item.visitCount || 0;
-    const lastVisit = item.lastVisitTime || item.dateAdded || 0;
-    const daysSinceVisit = (Date.now() - lastVisit) / ONE_DAY;
-
-    const isFrequent = visitCount >= FREQUENT_THRESHOLD;
-    const isRecent = daysSinceVisit < 7; // Last 7 days
-
-    // If filtering by frequent or recent
-    if (!showFrequent && !showRecent) {
-      // Both unchecked - show nothing that would need these filters
-      if (!item.isFolder && visitCount === 0) return false;
-    } else if (!showFrequent && showRecent) {
-      // Only recent
-      if (!item.isFolder && !isRecent) return false;
-    } else if (showFrequent && !showRecent) {
-      // Only frequent
-      if (!item.isFolder && !isFrequent) return false;
-    }
-    // If both checked, show all (no additional filtering)
-
     // Apply search query
     if (searchQuery) {
       return (
@@ -881,9 +861,10 @@ function applyFilters() {
     return true;
   });
 
-  // Pass the filter states to sorting so it knows which scoring components to use
-  // Note: time-of-day is only for highlighting, not for scoring
-  sortAndDisplayItems(filtered, showFrequent, showRecent);
+  // Sort items with the selected primary sort criterion
+  // If sortByFrequent is true, sort by frequency first (then recency)
+  // If sortByFrequent is false (sortByRecent), sort by recency first (then frequency)
+  sortAndDisplayItems(filtered, sortByFrequent);
 }
 
 function getTimeAgo(timestamp) {
