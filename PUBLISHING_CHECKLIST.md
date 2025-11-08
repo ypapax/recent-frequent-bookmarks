@@ -95,7 +95,6 @@ Go to Chrome Web Store Developer Dashboard and click "New Item"
   - bookmarks: Required to display user's bookmarks
   - history: Required to show visit counts and patterns
   - storage: Required to save user preferences
-  - tabs: Required to open bookmarks
 
 **Distribution:**
 - [ ] Select visibility: Public
@@ -166,7 +165,6 @@ Perfect for power users who:
 - Bookmarks: To display your bookmarks
 - History: To show visit counts and patterns
 - Storage: To save your preferences
-- Tabs: To open bookmarks in new tabs
 
 All data stays on your device. No tracking. No external servers.
 

@@ -12,7 +12,6 @@ This extension requires access to:
 - **Bookmarks**: To display your bookmarked pages
 - **Browsing History**: To show visit counts, last visit times, and usage patterns
 - **Local Storage**: To save your preferences (hidden items, filter states, search queries)
-- **Tabs**: To open bookmarks in new tabs when clicked
 
 ### How We Use Your Data
 All data processing happens **locally on your device**:
@@ -37,7 +36,6 @@ All data processing happens **locally on your device**:
 - **bookmarks**: Required to read and display your bookmarks
 - **history**: Required to show visit counts and times
 - **storage**: Required to save your settings and hidden items
-- **tabs**: Required to open bookmarks when clicked
 
 ## Changes to Privacy Policy
 We may update this privacy policy from time to time. Any changes will be posted in the extension's store listing and README file.

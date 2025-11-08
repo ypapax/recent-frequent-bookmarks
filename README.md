@@ -79,7 +79,6 @@ All processing happens **locally in your browser** - no data is sent anywhere.
 - `bookmarks`: Read your bookmarks to display them
 - `history`: Check visit counts and times for ranking
 - `storage`: Save your preferences and hidden items locally
-- `tabs`: Open bookmarks in new tabs when clicked
 
 ## Screenshots
 
